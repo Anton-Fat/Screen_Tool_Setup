@@ -34,7 +34,7 @@ void SendlerClass::run()
 
       if (m_loop && ComConnect) {
 
-            for (int gad = 1; gad < 6; gad++) // set_list.size()
+            for (int gad = 1; gad < 7; gad++) // set_list.size()
             {
 
                 str = set_list.at(gad);

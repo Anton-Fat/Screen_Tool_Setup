@@ -16,15 +16,14 @@
 #define      res_lenght   3
 #define      res_liquid   4
 #define      res_mix      5
+#define      res_volume   6
 
 #define      testenable   false
 
 extern QSerialPort *serial;
 
 extern QStringList  set_list;
-extern const char * st_set_shape;
-extern const char * st_set_mix;
-extern const char * st_set_liq;
+
 
 extern QByteArray requestData;
 extern QByteArray sendData;

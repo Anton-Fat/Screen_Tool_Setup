@@ -14,6 +14,9 @@ TEMPLATE = app
 
 RC_ICONS += KS2_logo.ico
 
+
+
+
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which has been marked as deprecated (the exact warnings
 # depend on your compiler). Please consult the documentation of the
@@ -27,7 +30,11 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 CONFIG += c++11
 
-
+# static linking library
+CONFIG +=   static \
+            platform \
+            release \
+            no-exceptions
 
 SOURCES += \
         main.cpp \

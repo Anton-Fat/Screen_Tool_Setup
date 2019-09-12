@@ -14,7 +14,7 @@ int NumPressButton;
 int NumSendMessage;
 QStringList  set_list;
 
-const char * st_version = "Version 0.2";
+const char * st_version = "Version 0.3";
 
 const char * st_get_dev = "get_device\r";
 const char * st_get_did = "get_did\r";
@@ -25,6 +25,7 @@ const char * st_set_height = "height";
 const char * st_set_diam = "diameter";
 const char * st_set_liq = "liquid";
 const char * st_set_mix = "mix";
+const char * st_set_nominal = "nominal";
 
 const char * st_set = "set_";
 const char * st_get = "get_";
@@ -46,6 +47,9 @@ const char * st_val_liquid2r = "пропан";
 const char * st_val_liquid3r = "бутан";
 const char * st_val_liquid4r = "пропан-бутан";
 
+const char * st_val_invcmd   = "INVCMD";
+const quint16 vendor_id = 1155;
+const quint16 product_id = 22336;
 
 QByteArray requestData;
 QByteArray sendData;
@@ -68,11 +72,39 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    this->setFixedSize(this->geometry().width(),this->geometry().height());
+
+   // this->setFixedSize(this->geometry().width(),this->geometry().height());
+
+    // search valid port --------------------------------
+    bool exist_vendor;
+    quint16 vendor_id2;
+    quint16 product_id2;
 
     const auto infos = QSerialPortInfo::availablePorts();
     for (const QSerialPortInfo &info : infos)
-    ui->comboBox->addItem(info.portName());
+    {
+        exist_vendor = true;
+        qDebug() << "Has vendor id" << info.hasVendorIdentifier();
+        if(info.hasVendorIdentifier()){
+            vendor_id2 = info.vendorIdentifier();
+            qDebug() << "Vendor id" << vendor_id2;
+        } else {
+        exist_vendor = false;
+        }
+                qDebug() << "Has Product id" << info.hasProductIdentifier();
+                if(info.hasProductIdentifier()){
+                    product_id2 = info.productIdentifier();
+                    qDebug() << "Product id" << product_id2;
+                }else {
+                exist_vendor = false;
+                }
+        if((exist_vendor)&&(vendor_id == vendor_id2)&&(product_id == product_id2))
+        {
+           ui->comboBox->addItem(info.portName());
+        }
+    }
+    // end search port
+
 
     if(ui->comboBox->count() == 0)
     {
@@ -138,6 +170,8 @@ MainWindow::MainWindow(QWidget *parent) :
         set_list.last().append(st_set_liq);
         set_list.append(st_set);
         set_list.last().append(st_set_mix);
+        set_list.append(st_set);
+        set_list.last().append(st_set_nominal);
 
         set_list.append(st_get);
         set_list.last().append(st_set_shape);
@@ -149,6 +183,9 @@ MainWindow::MainWindow(QWidget *parent) :
         set_list.last().append(st_set_liq);
         set_list.append(st_get);
         set_list.last().append(st_set_mix);
+        set_list.append(st_get);
+        set_list.last().append(st_set_nominal);
+
 
         // setup get value
         if(!testenable){
@@ -251,6 +288,11 @@ void MainWindow::realPush(const QString &s1, int res)
             str.append(ui->spinBox_Proc->text());
             // str.append('%');
             break;
+            case res_volume:
+            str.append(' ');
+            str.append(ui->spinBox_Volume->text());
+            break;
+
 
             } // switch
 
@@ -315,9 +357,16 @@ void MainWindow::serialReceived()
     if( NumPressButton == btn_connect)
     {
 
-        int Num = 4;
+        int Num = 5;
         QString str;
         QString tmp = requestData2;
+
+        QString comp_str2;
+        comp_str2 = st_val_invcmd;
+        if (tmp == comp_str2)
+        {
+        ui->label_status->setText("invalid command");
+        }
 
         if(NumSendMessage == 1)
         {
@@ -365,9 +414,11 @@ void MainWindow::serialReceived()
             }
             } else if (NumSendMessage == 7) {
             ui->spinBox_Proc->setValue(tmp.toInt());
+            } else if (NumSendMessage == 8) {
+            ui->spinBox_Volume->setValue(tmp.toInt());
             NumSendMessage = 0;
             }
-        if ((NumSendMessage >= 2) && (NumSendMessage <= 6))
+        if ((NumSendMessage >= 2) && (NumSendMessage <= 7))
         {
             // -------------------------
             Num += NumSendMessage;
@@ -394,12 +445,37 @@ void MainWindow::on_pushButton_clicked()
 
 if(ui->comboBox->count() == 0)
 {
+
 qDebug() << "New find";
+
+// search valid port --------------------------------
+bool exist_vendor;
+quint16 vendor_id2;
+quint16 product_id2;
+
 const auto infos = QSerialPortInfo::availablePorts();
 for (const QSerialPortInfo &info : infos)
 {
-ui->comboBox->addItem(info.portName());
+    exist_vendor = true;
+    qDebug() << "Has vendor id" << info.hasVendorIdentifier();
+    if(info.hasVendorIdentifier()){
+        vendor_id2 = info.vendorIdentifier();
+    } else {
+    exist_vendor = false;
+    }
+            qDebug() << "Has Product id" << info.hasProductIdentifier();
+            if(info.hasProductIdentifier()){
+                product_id2 = info.productIdentifier();
+            }else {
+            exist_vendor = false;
+            }
+    if((exist_vendor)&&(vendor_id == vendor_id2)&&(product_id == product_id2))
+    {
+       ui->comboBox->addItem(info.portName());
+    }
 }
+// end search port
+
 if(ui->comboBox->count() != 0)
 ui->pushButton->setText("Подключение");
 
@@ -501,7 +577,7 @@ void MainWindow::on_pushButton_test_clicked()
    // reOpenPort();
 
     Num = ui->spinBox_test->value();
-    Num += 5;
+    Num += 6;
 
     str = set_list.at(Num);
     str.append('\r');
