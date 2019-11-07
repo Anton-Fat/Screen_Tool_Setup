@@ -28,6 +28,9 @@ public:
 
     bool m_loop = false;
 
+  //  bool m_loop_dop = false;
+  //  bool m_correct = false;
+
 signals:
     void push(const QString &s, int res);
 

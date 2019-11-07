@@ -39,14 +39,19 @@ CONFIG +=   static \
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-        sendlerclass.cpp
+        properties_2.cpp \
+        sendlerclass.cpp \
+        serialtimer.cpp
 
 HEADERS += \
         mainwindow.h \
-        sendlerclass.h
+        properties_2.h \
+        sendlerclass.h \
+        serialtimer.h
 
 FORMS += \
-        mainwindow.ui
+        mainwindow.ui \
+        properties_2.ui
 
 
 # Default rules for deployment.
@@ -55,3 +60,6 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 DISTFILES +=
+
+RESOURCES += \
+    images.qrc

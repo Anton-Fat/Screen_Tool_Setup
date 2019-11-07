@@ -251,9 +251,6 @@ MainWindow::MainWindow(QWidget *parent) :
         get_list.append(st_get);
         get_list.last().append(st_set_deadvol);
 
-        // st_set_display = "display";
-        // const char * st_set_liq
-
         // setup get value
         if(!testenable){
            ui->groupBox->setHidden(true);
@@ -894,25 +891,20 @@ void MainWindow::on_pushButton_test_clicked()
     qDebug() << "Press test";
     if(ComConnect)
     {
-
     Num = ui->spinBox_test->value();
     if(Num == 0)
     {
-
      str = ui->text_Test->toPlainText();
-
     } else {
     Num += NumParam;
 
     str = set_list.at(Num);
     }
 
-
     if (ui->checkBox_Test->checkState() == Qt::Checked)  // Qt::Unchecked
     {
     str.append('\r');
     }
-
 
      // get infooo (T)
     sendData = str.toLocal8Bit();
@@ -928,9 +920,7 @@ void MainWindow::on_pushButton_test_clicked()
 void MainWindow::on_pb_Add_Parametr_clicked()
 {
 
-
     ad = new Properties_2(); // this
-
     ad->show();
 
 }
@@ -944,13 +934,10 @@ if (obj == ui->pb_Add_Parametr)
     if (evt->type() == QEvent::Paint)
       {
 
-       //     qDebug()<<"eventFilter find";
-
        //   return true;
       }
 
 }
-
   return false;
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
@@ -1138,7 +1125,7 @@ void MainWindow::on_spinBox_V_editingFinished()
     Vcalc = D*D*H*M_PI_4/1000000;
     qDebug() << "Vcalc = ";
     qDebug() << Vcalc;
-  //  dfsgsdde
+  
             if (V*100 < Vcalc*Size_V_min)
             {
             mes1.append("мало");
@@ -1156,8 +1143,7 @@ void MainWindow::on_spinBox_V_editingFinished()
             AllValCorrect(); //
             }
 
-    // V =
-
+   
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 void MainWindow::AllValCorrect()
@@ -1284,10 +1270,6 @@ Stringi MainWindow::ParamAnalise(QStringList  Input_text) // DW_radio_text
     if (str_1.contains(metka, Qt::CaseInsensitive))
     {
 
-
-  //  int metkaEndPos = str_1.indexOf("\n", metkaPos);
-  //  QString subStr = str_1.mid(metkaPos, metkaEndPos - metkaPos);
-
         metkaPos = str_1.indexOf(metka) + 1;
         subStr = str_1.left(metkaPos);
         number = FindChislo(subStr, 0);
@@ -1382,7 +1364,6 @@ Stringi MainWindow::ParamAnalise(QStringList  Input_text) // DW_radio_text
 
     } // metkaBublik
     // -------------------------------------
-
 
     }
     } // for

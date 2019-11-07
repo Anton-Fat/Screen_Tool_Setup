@@ -9,6 +9,7 @@
 % mail: antonfat@gmail.com        %
 %*********************************/
 #include "mainwindow.h"
+#include "properties_2.h"
 #include <QApplication>
 
 int main(int argc, char *argv[])
@@ -16,6 +17,11 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
     MainWindow w;
     w.show();
+
+  //  Properties_2 ad; //
+
+
+ //   ad.show();
 
 
 

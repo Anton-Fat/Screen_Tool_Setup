@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>Images/Logo.png</file>
+        <file>Images/cilindry_W130.png</file>
+        <file>Images/tor-narujniy_W130.png</file>
+        <file>Images/tor-polnoteliy_W130.png</file>
+    </qresource>
+</RCC>
