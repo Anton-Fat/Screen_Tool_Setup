@@ -108,9 +108,11 @@ private:
     void HandShow(bool *Hand);
     bool MBtext(QString mes);
     bool MBtextS(QString mes, QString mes2);
+    void MBtextErr(QString mes1, QString mes2);
     bool MBok();
     void AllValCorrect();
     bool CorrectValAll();
+    bool AllValCheck();
 
     bool LoadFromFile();
     bool SaveToFile(QString name, QString text);

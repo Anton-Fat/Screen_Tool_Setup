@@ -24,9 +24,10 @@ extern const char * st_get_display2;
 
 
 extern const  QString mes0;
+extern const  QString mes01;
 extern const  QString mes1;
-extern const  QString mes2;
-extern const  QString mes4;
+extern const  QString mes8;
+extern const  QString mes9;
 extern const  QString mes5;
 
 extern bool Properties;

@@ -34,7 +34,7 @@ void SendlerClass::run()
 
       if (m_loop && ComConnect) {
 
-            for (gad = NumDopParam+2; gad < NumDopParam+4; gad++) // set_list.size()
+            for (gad = NumDopParam+2; gad < NumDopParam+4; gad++)
             {
 
                 str = set_list.at(gad);

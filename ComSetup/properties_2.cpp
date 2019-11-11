@@ -6,13 +6,17 @@ const QString BorderButton = "QPushButton { border: 2px solid gray;"
                              "border-style: outset;"
                              "padding: 3px;"
                              "background-color: #D1D1D1;"
-                             "border-radius: 8px;}";
+                             "border-radius: 8px;}"
+                             "QPushButton:pressed { background-color: #A1A1C1;}"
+                             "QPushButton:hover:!pressed { background-color: #D1D1F1;}";
+
 
 const  QString mes0 = "Предупреждение о возможной ошибке ввода значений:";
-const  QString mes1 = "Обратите внимание, что параметры вводятся не в <b>см</b>, а в <b>мм</b>. Вы уверены, что ширина бака ";
-const  QString mes2 = "Введены слишком большие параметры высоты/ширины бака. Вы уверены, что ширина бака ";
-const  QString mes4 = "Подключите датчик КS2 PROP 1 к компьютеру. Для этого нажмите кнопку ";
+const  QString mes01 = "Предупреждение о некорректном вводе значений:";
+const  QString mes1 = "Обратите внимание, что параметры вводятся не в <b>см</b>, а в <b>мм</b>. Вы уверены, что ";
 const  QString mes5 = "Значение объема слишком ";
+const  QString mes8 = "Датчик не подключен. Повторите ";
+const  QString mes9 = "Датчик не подключен. Выберите нужный датчик из списка устройств и нажмите кнопку  ";
 
 
 const char * st_get_display3a = "both";
@@ -36,7 +40,6 @@ int NumPressButton;
 
 bool InitForma;
 
-// int PropaneVal;
 
 
 Properties_2::Properties_2(QWidget *parent) :
@@ -49,7 +52,9 @@ Properties_2::Properties_2(QWidget *parent) :
 
     //setWindowFlags(Qt::FramelessWindowHint);
 
-    setWindowFlags(Qt::CustomizeWindowHint);
+   // setWindowFlags(Qt::CustomizeWindowHint);
+
+    setWindowFlags(Qt::WindowCloseButtonHint);
 
     qDebug() << "Start forma";
     InitForma = false;
@@ -76,10 +81,6 @@ Properties_2::Properties_2(QWidget *parent) :
       ui->comboBox_view->addItem(st_val_view1r);
       ui->comboBox_view->addItem(st_val_view2r);
       ui->comboBox_view->addItem(st_val_view3r);
-
-    //  for (int i = 0 ; i < ui->comboBox_view->count() ; ++i) {
-    //  ui->comboBox_view->setItemData(i, Qt::AlignCenter, Qt::TextAlignmentRole);
-    //  }
 
 
       ui->comboBox_view->setPalette(sample_palette);
@@ -122,7 +123,6 @@ void Properties_2::on_pushButton_PR_cansel_clicked()
     Properties = false;
     hide();
 
-
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 void Properties_2::on_pushButton_PR_setup_clicked()
@@ -132,10 +132,6 @@ void Properties_2::on_pushButton_PR_setup_clicked()
   NumPressButton = btn_setup_dop;
 
     Properties = true;
-   // hide();
-
-  //requestData.clear();
-
 
   ui->pushButton_PR_setup->setText("Ожидайте");
 
@@ -175,8 +171,6 @@ void Properties_2::horizontalSlider_setText(int value)
 void Properties_2::on_spinBox_editingFinished()
 {
 qDebug() << "Tol change";
-
-
 
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB

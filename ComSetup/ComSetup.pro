@@ -12,7 +12,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = ComSetup
 TEMPLATE = app
 
-RC_ICONS += KS2_logo.ico
+RC_ICONS += KS2_logo2.ico
 
 
 
@@ -62,4 +62,5 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 DISTFILES +=
 
 RESOURCES += \
-    images.qrc
+    images.qrc \
+    resources.qrc

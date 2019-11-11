@@ -13,7 +13,7 @@
 QSerialPort *serial;
 
 bool Forma, Hand, HandOK;
-bool CorrectValH, CorrectValD, CorrectValV;
+bool CorrectValH, CorrectValD, CorrectValDI, CorrectValV;
 int NumPressRadio1;
 bool Reopen;
 bool Input;
@@ -23,8 +23,18 @@ QStringList  set_list;
 QStringList  get_list;
 QStringList  Display;
 
-const char * st_version = "Version 0.4";
+const char * st_version = "0.5";
+const char * st_manual = "(тут ссылка)";
+const char * st_help = "help@ks2corp.com";
 const char * file_param = "Param.txt";
+
+const char * st_btn_search = "Поиск";
+const char * st_btn_connect = "Подключить";
+const char * st_btn_disconnect = "Отключить";
+const char * st_btn_no_connect = "Нет подключения";
+
+const char * st_incorrect = "Несовместимые параметры";
+
 
 const char * split_str = "\r\n";
 
@@ -98,7 +108,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // ---------------------------------------------------------------
     // Setup images
-
+    QString MesLabel;
 
         ui->tabWidget->setStyleSheet("padding: 2px 2px 2px 2px");   /* top - right - bottom - left */
 
@@ -108,6 +118,7 @@ MainWindow::MainWindow(QWidget *parent) :
         ui->pushButton->setStyleSheet(BorderButton);
         ui->pushButton_2->setStyleSheet(BorderButton);
         ui->pushButton_3->setStyleSheet(BorderButton);
+
 
      //
 
@@ -179,10 +190,21 @@ MainWindow::MainWindow(QWidget *parent) :
 
     if(ui->comboBox->count() == 0)
     {
-    ui->pushButton->setText("Поиск");
+    ui->pushButton->setText(st_btn_search);
     }
 
-    ui->label_status->setText(st_version);
+  //  ui->label_status->setText(st_version);
+
+    ui->label_prog_1->setText(st_version);
+    ui->label_prog_2->setText("KS2 Engineering");
+    ui->label_prog_3->setText(st_help);
+    MesLabel = "Если есть вопросы, ознакомьтесь с руководством пользователя по ссылке ";
+    MesLabel.append(split_str);
+    MesLabel.append(st_manual);
+    MesLabel.append(" или пишите на почту ");
+    MesLabel.append(st_help);
+    ui->label_prog_4->setText(MesLabel);
+
 
     // setup UI
     if(true)
@@ -198,6 +220,10 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->label_ID->setPalette(sample_palette);
     ui->label_dev->setPalette(sample_palette);
     ui->label_ver->setPalette(sample_palette);
+
+    ui->label_prog_1->setPalette(sample_palette);
+    ui->label_prog_2->setPalette(sample_palette);
+    ui->label_prog_3->setPalette(sample_palette);
 
     }
     ui->statusBar->addWidget(ui->label_status);
@@ -251,9 +277,6 @@ MainWindow::MainWindow(QWidget *parent) :
         get_list.append(st_get);
         get_list.last().append(st_set_deadvol);
 
-        // st_set_display = "display";
-        // const char * st_set_liq
-
         // setup get value
         if(!testenable){
            ui->groupBox->setHidden(true);
@@ -294,6 +317,7 @@ MainWindow::MainWindow(QWidget *parent) :
      SerialKostil.start();
     }
 
+   // ui->label_status->setText(st_btn_no_connect);
 
   //  adjustSize();
 
@@ -323,9 +347,11 @@ void MainWindow::realPush(const QString &s1, int res)   // >>>
             if(HandOK == true)
             {
              MBok(); //
-             ui->label_status->setText("parameters setup");
+             ui->label_status->setText(st_incorrect);
+             MBtextErr(st_incorrect, mes01);
             } else {
-            ui->label_status->setText("incompatible parameters");
+
+            ui->label_status->setText("Несовместимые параметры");
             }
         }
     if(res == -2)
@@ -464,7 +490,7 @@ void MainWindow::realPop(const QString &s1, int res)   // <<<
         comp_str2 = st_val_invcmd;
         if (Input == comp_str2)
         {
-        ui->label_status->setText("invalid command");
+        ui->label_status->setText("Неверная команда");
         }
 
         if(NumSendMessage == 1)
@@ -684,7 +710,7 @@ for (const QSerialPortInfo &info : infos)
 // end search port
 
 if(ui->comboBox->count() != 0)
-ui->pushButton->setText("Подключение");
+ui->pushButton->setText(st_btn_connect);
 
 } else {
 
@@ -698,7 +724,7 @@ ui->pushButton->setText("Подключение");
              ComConnect = true;
              qDebug()<<"Port connected";   // ---------------------
 
-             ui->label_status->setText("link open");
+             ui->label_status->setText("Датчик подключен");
              QThread::msleep(200);
              NumSendMessage = 1;
              // get infooo (1)
@@ -710,7 +736,7 @@ ui->pushButton->setText("Подключение");
 
              writeData(outputData.toLocal8Bit());
 
-             ui->pushButton->setText("Отключение");
+             ui->pushButton->setText(st_btn_disconnect);
            }
 
 
@@ -720,8 +746,8 @@ ui->pushButton->setText("Подключение");
         ComConnect = false;
         serial->close();
         qDebug()<<"Port close";
-        ui->label_status->setText("link close");
-        ui->pushButton->setText("Подключение");
+        ui->label_status->setText(st_btn_no_connect);
+        ui->pushButton->setText(st_btn_connect);
         }
 
         }
@@ -789,23 +815,9 @@ void MainWindow::on_pushButton_2_clicked()
 
         } else {  // Hand == true
 
-            if(!CorrectValAll())
-            {
-             qDebug() << "No Correct";
 
-             if((ui->spinBox_H->value() > Size_B_max)&&(ui->spinBox_D->value() > Size_B_max))
-             {
-             mes = mes2+Dval+" мм, и высота "+Hval+" мм?";
-             } else {
-             mes = mes1+Dval+" мм, и высота "+Hval+" мм?";
-             }
-
-             CorrectValH = MBtext(mes);
-             if(CorrectValH) AllValCorrect(); // CorrectValD = true;
-
-            }
-
-            if(CorrectValAll())
+          //  if(CorrectValAll())
+            if(AllValCheck())
             {
               qDebug() << "Correct";
 
@@ -824,11 +836,11 @@ void MainWindow::on_pushButton_2_clicked()
               outputData.append(' ');
               outputData.append(ui->spinBox_H->text());
               outputData.append(' ');
-              if(DataParam.CurFormaSelect == 1){
-              outputData.append(ui->spinBox_DI->text());
-              outputData.append(' ');
-              }
               outputData.append(ui->spinBox_V->text());
+              if(DataParam.CurFormaSelect == 1){
+              outputData.append(' ');
+              outputData.append(ui->spinBox_DI->text());
+              }
 
               qDebug() <<  "Hand true ------------------------";
               qDebug() <<  outputData;
@@ -852,12 +864,26 @@ void MainWindow::on_pushButton_2_clicked()
 
      } else {
 
-       // ui->pushButton->text()
 
-        QMessageBox msgBox;
-        msgBox.setWindowTitle(" ");
-        msgBox.setText(mes4+ui->pushButton->text());
-        msgBox.exec();
+        if(ui->pushButton->text() == st_btn_search)
+        {
+
+            QMessageBox msgBox;
+            msgBox.setWindowTitle(" ");
+            msgBox.setText(mes8+ui->pushButton->text()+".");
+            msgBox.exec();
+
+        }
+        if(ui->pushButton->text() == st_btn_connect)
+        {
+            QMessageBox msgBox;
+            msgBox.setWindowTitle(" ");
+            msgBox.setText(mes9+ui->pushButton->text()+".");
+            msgBox.exec();
+
+        }
+
+
      }
 
 }
@@ -879,7 +905,7 @@ void MainWindow::on_pushButton_3_clicked()
     } else {
 
       ui->comboBox->clear();
-      ui->pushButton->setText("Поиск");
+      ui->pushButton->setText(st_btn_search);
 }
 
 }
@@ -894,25 +920,20 @@ void MainWindow::on_pushButton_test_clicked()
     qDebug() << "Press test";
     if(ComConnect)
     {
-
     Num = ui->spinBox_test->value();
     if(Num == 0)
     {
-
      str = ui->text_Test->toPlainText();
-
     } else {
     Num += NumParam;
 
     str = set_list.at(Num);
     }
 
-
     if (ui->checkBox_Test->checkState() == Qt::Checked)  // Qt::Unchecked
     {
     str.append('\r');
     }
-
 
      // get infooo (T)
     sendData = str.toLocal8Bit();
@@ -928,10 +949,29 @@ void MainWindow::on_pushButton_test_clicked()
 void MainWindow::on_pb_Add_Parametr_clicked()
 {
 
-
     ad = new Properties_2(); // this
-
     ad->show();
+    // position
+
+    int x, y, offset_x, offset_y;
+
+    x = this->geometry().x();
+    y = this->geometry().y();
+
+    offset_x = 50;
+    offset_y = 200;
+
+    qDebug() << "x = ";
+    qDebug() << x;
+    qDebug() << "y = ";
+    qDebug() << y;
+
+    // QApplication::desktop()->screenGeometry();
+
+
+    ad->move(x+offset_x, y+offset_y);
+
+
 
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
@@ -944,13 +984,10 @@ if (obj == ui->pb_Add_Parametr)
     if (evt->type() == QEvent::Paint)
       {
 
-       //     qDebug()<<"eventFilter find";
-
        //   return true;
       }
 
 }
-
   return false;
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
@@ -1053,6 +1090,27 @@ bool MainWindow::MBtextS(QString mes1, QString mes2)
    return true;
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+void MainWindow::MBtextErr(QString mes1, QString mes2)
+{
+
+     QMessageBox* pmbx =
+               new QMessageBox(mes2,
+                               mes1, // "<i>Simple</i> <u>Message</u>",
+                               QMessageBox::Warning,
+                               QMessageBox::NoButton,
+                               QMessageBox::No,
+                               QMessageBox::NoButton
+                              );
+
+             pmbx->setButtonText(QMessageBox::No,"Исправить");
+           int n = pmbx->exec();
+           delete pmbx;
+
+           if (n == QMessageBox::No) {
+           }
+
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 bool MainWindow::MBok()
 {
 QString mes2 = "Ультразвуковой датчик уровня KS2 Prop 1 настроен на заданные значения";
@@ -1067,97 +1125,159 @@ msgBox.exec();
 void MainWindow::on_spinBox_H_editingFinished()
 {
 
-    QString Hval = ui->spinBox_H->text();
-    QString Dval = ui->spinBox_D->text();
-    QString mes;
-
-    qDebug()<<"Change val 1 ------------";
-    int H;
-    H = ui->spinBox_H->value();
-    if (H<Size_B_min)
-    {
-
-      mes = mes1+Dval+" мм, и высота "+Hval+" мм?";
-      CorrectValH = MBtext(mes);
-      if(CorrectValH) AllValCorrect(); //CorrectValD = true;
-
-    } //
-    if (H>Size_B_max)
-    {
-
-      mes = mes2+Dval+" мм, и высота "+Hval+" мм?";
-      CorrectValH = MBtext(mes);
-      if(CorrectValH) AllValCorrect(); //CorrectValD = true;
-
-    } //
-
-
 }// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 void MainWindow::on_spinBox_D_editingFinished()
 {
-    QString Hval = ui->spinBox_H->text();
-    QString Dval = ui->spinBox_D->text();
-    QString mes;
-
-    qDebug()<<"Change val 2 ------------";
-    int D;
-    D = ui->spinBox_D->value();
-    if (D<Size_B_min)
-    {
-
-      mes = mes1+Dval+" мм, и высота "+Hval+" мм?";
-      CorrectValD = MBtext(mes);
-      if(CorrectValD)
-      AllValCorrect(); //
-
-    } //
-    if (D>Size_B_max)
-    {
-
-      mes = mes2+Dval+" мм, и высота "+Hval+" мм?";
-      CorrectValH = MBtext(mes);
-      if(CorrectValH)
-      AllValCorrect(); //
-
-    } //
-
 
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 void MainWindow::on_spinBox_V_editingFinished()
 {
-    QString Vval = ui->spinBox_V->text();
-        QString mes1, mes2;
-    int D, H, V, Vcalc;
-    D = ui->spinBox_D->value();
-    H = ui->spinBox_H->value();
-    V = ui->spinBox_V->value();
 
-    mes1 = mes5;
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+bool MainWindow::AllValCheck()
+{
+QString Hval = ui->spinBox_H->text();
+QString Dval = ui->spinBox_D->text();
+QString mes;
 
-    Vcalc = D*D*H*M_PI_4/1000000;
-    qDebug() << "Vcalc = ";
-    qDebug() << Vcalc;
-  //  dfsgsdde
-            if (V*100 < Vcalc*Size_V_min)
-            {
-            mes1.append("мало");
-            mes2 = "Введено значение объема "+Vval+" л.";
-            CorrectValV = MBtextS(mes1, mes2);  // mes5
-            if(CorrectValV)
-            AllValCorrect(); //
-            }
-            if (V*100 > Vcalc*Size_V_max)
-            {
-            mes1.append("велико");
-            mes2 = "Введено значение объема "+Vval+" л.";
-            CorrectValV = MBtextS(mes1, mes2);  // mes5
-            if(CorrectValV)
-            AllValCorrect(); //
-            }
+QString st_H = "высот";
+QString st_D = "ширин";
 
-    // V =
+bool error, furst_string = true;
 
+qDebug()<<"Change val 1 ------------";
+
+QString Vval = ui->spinBox_V->text();
+    QString mes1A, mes2A;
+int H, D, DI, V, Vcalc;
+
+H = ui->spinBox_H->value();
+D = ui->spinBox_D->value();
+DI = ui->spinBox_DI->value();
+V = ui->spinBox_V->value();
+
+error = false;
+
+
+//=============================================
+if(!ui->spinBox_D->isHidden())
+{
+    qDebug() << "Check inside diametr";
+
+    if(DI >= D)
+    {
+        mes1A = "Внешний диаметр должен быть больше чем внутренний.";
+        furst_string = false;
+        error = true;
+    }
+
+}
+//=============================================
+if(error)
+{
+    MBtextErr(mes1A, mes01);
+    return false;
+}
+
+furst_string = true;
+mes1A.clear();
+error = false;
+
+//=============================================
+Vcalc = D*D*H*M_PI_4/1000000;
+qDebug() << "Vcalc = ";
+qDebug() << Vcalc;
+
+        if (V*100 < Vcalc*Size_V_min)
+        {
+
+            mes1A.append(mes5);
+            mes1A.append("мало");
+
+            error = true;
+        }
+        if (V*100 > Vcalc*Size_V_max)
+        {
+
+            mes1A.append(mes5);
+            mes1A.append("велико");
+
+            error = true;
+        }
+
+        if(error)
+        {
+            MBtextErr(mes1A, mes01);
+            return false;
+        }
+
+        furst_string = true;
+        mes1A.clear();
+        error = false;
+//=============================================
+if (H<Size_B_min)
+{
+       mes1A.append(mes1);
+       mes1A.append(st_H);
+       mes1A.append("а бака ");
+       mes1A.append(Hval);
+       mes1A.append(" мм?");
+
+       error = true;
+
+//  mes = mes1+Dval+" мм, и высота "+Hval+" мм?";
+//  CorrectValH = MBtext(mes1A);
+//  if(CorrectValH) AllValCorrect(); //CorrectValD = true;
+//  return false;
+} //
+if (H>Size_B_max)
+{
+    mes1A.append("Введены слишком большие параметры ");
+    mes1A.append(st_H);
+    mes1A.append("ы бака. Вы уверены, что ");
+    mes1A.append(st_H);
+    mes1A.append("а бака ");
+    mes1A.append(Hval);
+    mes1A.append(" мм?");
+    error = true;
+} //
+//=============================================
+qDebug()<<"Change val 2 ------------";
+
+if (D<Size_B_min)
+{
+if(!furst_string) mes1A.append(split_str);
+
+mes1A.append(mes1);
+mes1A.append(st_D);
+mes1A.append("а бака ");
+mes1A.append(Dval);
+mes1A.append(" мм?");
+error = true;
+} //
+if (D>Size_B_max)
+{
+    if(!furst_string) mes1A.append(split_str);
+
+    mes1A.append("Введены слишком большие параметры ");
+    mes1A.append(st_D);
+    mes1A.append("ы бака. Вы уверены, что ");
+    mes1A.append(st_D);
+    mes1A.append("а бака ");
+    mes1A.append(Dval);
+    mes1A.append(" мм?");
+    error = true;
+} //
+
+if(error)
+{
+
+    return MBtext(mes1A);
+}
+
+return true;
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 void MainWindow::AllValCorrect()
@@ -1165,6 +1285,7 @@ void MainWindow::AllValCorrect()
 CorrectValH = true;
 CorrectValD = true;
 CorrectValV = true;
+CorrectValDI = true;
 }
 
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
@@ -1173,6 +1294,7 @@ bool MainWindow::CorrectValAll()
     if(!CorrectValH) return false;
     if(!CorrectValD) return false;
     if(!CorrectValV) return false;
+    if(!CorrectValDI) return false;
 
   return true;
 }
@@ -1284,10 +1406,6 @@ Stringi MainWindow::ParamAnalise(QStringList  Input_text) // DW_radio_text
     if (str_1.contains(metka, Qt::CaseInsensitive))
     {
 
-
-  //  int metkaEndPos = str_1.indexOf("\n", metkaPos);
-  //  QString subStr = str_1.mid(metkaPos, metkaEndPos - metkaPos);
-
         metkaPos = str_1.indexOf(metka) + 1;
         subStr = str_1.left(metkaPos);
         number = FindChislo(subStr, 0);
@@ -1382,7 +1500,6 @@ Stringi MainWindow::ParamAnalise(QStringList  Input_text) // DW_radio_text
 
     } // metkaBublik
     // -------------------------------------
-
 
     }
     } // for
