@@ -23,7 +23,7 @@ QStringList  set_list;
 QStringList  get_list;
 QStringList  Display;
 
-const char * st_version = "0.5";
+const char * st_version = "0.6";
 const char * st_manual = "(тут ссылка)";
 const char * st_help = "help@ks2corp.com";
 const char * file_param = "Param.txt";
@@ -83,7 +83,7 @@ quint8 NumParam;
 
 // Dynamic widget
 QStringList  DW_radio_text;
-bool CylPosition;
+bool CylPositionV;
 
 
 enum Liquid
@@ -93,8 +93,6 @@ enum Liquid
     liq_butane,
     liq_prop_but
 } liquid;
-
-
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -119,9 +117,6 @@ MainWindow::MainWindow(QWidget *parent) :
         ui->pushButton_2->setStyleSheet(BorderButton);
         ui->pushButton_3->setStyleSheet(BorderButton);
 
-
-     //
-
     // ---------------------------------------------------------------
 
     QPixmap pixmap_imL(":/Images/Logo.png");
@@ -139,9 +134,6 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->label_image_3->setPixmap(pixmap_im3);
 
     // search valid port --------------------------------
-    bool exist_vendor;
-    quint16 vendor_id2;
-    quint16 product_id2;
 
     NumParam = 6;
 
@@ -157,60 +149,23 @@ MainWindow::MainWindow(QWidget *parent) :
   //  DataParam.CurFormaSelect = 1;
     ui->radioButton_F1->click();
 
+    CylPositionV = false;
 
-    CylPosition = false;
-
-    const auto infos = QSerialPortInfo::availablePorts();
-    for (const QSerialPortInfo &info : infos)
-    {
-       // ui->comboBox->addItem(info.portName());
-
-        exist_vendor = true;
-        qDebug() << "Has vendor id" << info.hasVendorIdentifier();
-        if(info.hasVendorIdentifier()){
-            vendor_id2 = info.vendorIdentifier();
-            qDebug() << "Vendor id" << vendor_id2;
-        } else {
-        exist_vendor = false;
-        }
-                qDebug() << "Has Product id" << info.hasProductIdentifier();
-                if(info.hasProductIdentifier()){
-                    product_id2 = info.productIdentifier();
-                    qDebug() << "Product id" << product_id2;
-                }else {
-                exist_vendor = false;
-                }
-        if((exist_vendor)&&(vendor_id == vendor_id2)&&(product_id == product_id2))
-        {
-           ui->comboBox->addItem(info.portName());
-        }
-    }
-    // end search port
-
-
-    if(ui->comboBox->count() == 0)
-    {
-    ui->pushButton->setText(st_btn_search);
-    }
-
-  //  ui->label_status->setText(st_version);
+    RefreshPorts();
 
     ui->label_prog_1->setText(st_version);
     ui->label_prog_2->setText("KS2 Engineering");
     ui->label_prog_3->setText(st_help);
     MesLabel = "Если есть вопросы, ознакомьтесь с руководством пользователя по ссылке ";
-    MesLabel.append(split_str);
+ //   MesLabel.append(split_str);
     MesLabel.append(st_manual);
     MesLabel.append(" или пишите на почту ");
     MesLabel.append(st_help);
     ui->label_prog_4->setText(MesLabel);
 
-
     // setup UI
     if(true)
     {
-
-
 
     QPalette sample_palette;
     sample_palette.setColor(QPalette::Window, Qt::white);
@@ -229,7 +184,6 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->statusBar->addWidget(ui->label_status);
 
     serial = new QSerialPort(this);
-
 
     serial->setBaudRate(QSerialPort::Baud115200);
     serial->setDataBits(QSerialPort::Data8);
@@ -292,6 +246,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(serial,SIGNAL(readyRead()),this, SLOT(serialReceived()));
     connect(&SchwartzPower, &SendlerClass::push, this, &MainWindow::realPush);
     connect(&SerialKostil, &SerialTimer::pop, this, &MainWindow::realPop);
+    connect(&SerialKostil, &SerialTimer::status, this, &MainWindow::realStatus);
     connect(this, &MainWindow::ComSendData, this, &MainWindow::writeData);
 
     ComConnect = false;
@@ -347,11 +302,10 @@ void MainWindow::realPush(const QString &s1, int res)   // >>>
             if(HandOK == true)
             {
              MBok(); //
-             ui->label_status->setText(st_incorrect);
-             MBtextErr(st_incorrect, mes01);
-            } else {
 
-            ui->label_status->setText("Несовместимые параметры");
+            } else {
+                ui->label_status->setText(st_incorrect);
+                MBtextErr(st_incorrect, mes01);
             }
         }
     if(res == -2)
@@ -360,6 +314,7 @@ void MainWindow::realPush(const QString &s1, int res)   // >>>
     MBok(); //
 
     ad->hide();
+  //  delete ad;
 
     }
     } else {
@@ -434,6 +389,33 @@ void MainWindow::writeData(const QByteArray &data)
     SerialKostil.DataInput.clear();
     serial->write(data);
 }
+void MainWindow::realStatus(int res)
+{
+    bool delete_port = true;
+
+    if(res == 1)
+    {
+  //  qDebug()<<"Check Port ";
+
+    if(serial->error() == QSerialPort::NoError)
+    {
+    delete_port = false;
+
+    } else {
+    qDebug() << serial->error();
+    }
+
+    if(delete_port)
+    {
+    qDebug() << "Serial is not open !";
+    ui->pushButton->click();
+    MBtextErr("Датчик отключен. Проверьте подключение датчика к компьютеру.", "Ошибка");
+    RefreshPorts();
+    }
+
+    } // res 1
+
+}
 void MainWindow::realPop(const QString &s1, int res)   // <<<
 {
 
@@ -450,8 +432,6 @@ void MainWindow::realPop(const QString &s1, int res)   // <<<
     qDebug()<<Input;
 
     removeEcho(&Input);
-
-    //
 
     switch (NumPressButton) {
     case btn_setup:
@@ -571,19 +551,6 @@ void MainWindow::realPop(const QString &s1, int res)   // <<<
 
             }
 
-
-//            QString comp_str;
-//            comp_str = st_val_shape1;
-//            if (Input == comp_str)
-//            {
-//            //ui->comboBox_shape->setCurrentIndex(0);
-//            }
-//            comp_str = st_val_shape2;
-//            if (Input == comp_str)
-//            {
-//            //ui->comboBox_shape->setCurrentIndex(1);
-//            }
-
             } else if (NumSendMessage == 4) {
             // +++++++++++++++++++++++++++++++++++++++++++++++++++
             // +++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -609,7 +576,6 @@ void MainWindow::realPop(const QString &s1, int res)   // <<<
 
             SetupParamDopVal[1] = Input.toInt();
 
-
           //  ui->spinBox_D->setValue(Input.toInt());
 
             } else if (NumSendMessage == 6) {
@@ -630,9 +596,7 @@ void MainWindow::realPop(const QString &s1, int res)   // <<<
 
             NumSendMessage = 0;
 
-
             } else if (NumSendMessage == 8) {
-
             NumSendMessage = 0;
             }
 
@@ -656,7 +620,6 @@ void MainWindow::realPop(const QString &s1, int res)   // <<<
         }
     }
 
- //   requestData += requestData2;
     qDebug()<<"Receive data !";
 
 }
@@ -681,33 +644,8 @@ if(ui->comboBox->count() == 0)
 qDebug() << "New find";
 
 // search valid port --------------------------------
-bool exist_vendor;
-quint16 vendor_id2;
-quint16 product_id2;
 
-
-const auto infos = QSerialPortInfo::availablePorts();
-for (const QSerialPortInfo &info : infos)
-{
-    exist_vendor = true;
-    qDebug() << "Has vendor id" << info.hasVendorIdentifier();
-    if(info.hasVendorIdentifier()){
-        vendor_id2 = info.vendorIdentifier();
-    } else {
-    exist_vendor = false;
-    }
-            qDebug() << "Has Product id" << info.hasProductIdentifier();
-            if(info.hasProductIdentifier()){
-                product_id2 = info.productIdentifier();
-            }else {
-            exist_vendor = false;
-            }
-    if((exist_vendor)&&(vendor_id == vendor_id2)&&(product_id == product_id2))
-    {
-       ui->comboBox->addItem(info.portName());
-    }
-}
-// end search port
+RefreshPorts();
 
 if(ui->comboBox->count() != 0)
 ui->pushButton->setText(st_btn_connect);
@@ -806,17 +744,13 @@ void MainWindow::on_pushButton_2_clicked()
                   qDebug() <<  outputData;
 
                   reOpenPort();
-
                   writeData(outputData.toLocal8Bit());
-
-
 
                   }  // cur index
 
         } else {  // Hand == true
 
 
-          //  if(CorrectValAll())
             if(AllValCheck())
             {
               qDebug() << "Correct";
@@ -847,23 +781,18 @@ void MainWindow::on_pushButton_2_clicked()
 
               DataParam.Custom = outputData;
 
-
            //   reOpenPort();
-
            //   writeData(outputData.toLocal8Bit());
 
                  HandOK = true;
                  SchwartzPower.m_loop = true;
                  ui->pushButton_2->setText("Ожидайте");
 
-
             } // end correct
 
         }
 
-
      } else {
-
 
         if(ui->pushButton->text() == st_btn_search)
         {
@@ -882,10 +811,7 @@ void MainWindow::on_pushButton_2_clicked()
             msgBox.exec();
 
         }
-
-
      }
-
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 void MainWindow::on_pushButton_3_clicked()
@@ -929,18 +855,14 @@ void MainWindow::on_pushButton_test_clicked()
 
     str = set_list.at(Num);
     }
-
     if (ui->checkBox_Test->checkState() == Qt::Checked)  // Qt::Unchecked
     {
     str.append('\r');
     }
-
      // get infooo (T)
     sendData = str.toLocal8Bit();
     qDebug() << sendData;
-
     qDebug() << "Send --------------T";
-
     writeData(sendData);
 
     }
@@ -968,10 +890,7 @@ void MainWindow::on_pb_Add_Parametr_clicked()
 
     // QApplication::desktop()->screenGeometry();
 
-
     ad->move(x+offset_x, y+offset_y);
-
-
 
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
@@ -997,9 +916,8 @@ void MainWindow::FormaShow(bool *Forma)
     {
     *Forma = true;
 
-
     //adjustSize();
-    resize(width(),600);
+  //  resize(width(),600);
 
     qDebug()<<"Add forma";
     }  // Forma
@@ -1008,7 +926,7 @@ void MainWindow::FormaShow(bool *Forma)
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 void MainWindow::CylPositionShow()
 {
-    if(CylPosition)
+    if(CylPositionV)
     {
     ui->comboBox_Param->clear();
     for (int i = 0; i < DataParam.Num_BochkaV; i++) {
@@ -1121,20 +1039,7 @@ msgBox.setWindowTitle(" ");
 msgBox.setText(mes2);
 msgBox.exec();
 }
-// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-void MainWindow::on_spinBox_H_editingFinished()
-{
 
-}// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-void MainWindow::on_spinBox_D_editingFinished()
-{
-
-}
-// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-void MainWindow::on_spinBox_V_editingFinished()
-{
-
-}
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 bool MainWindow::AllValCheck()
 {
@@ -1166,9 +1071,9 @@ if(!ui->spinBox_D->isHidden())
 {
     qDebug() << "Check inside diametr";
 
-    if(DI >= D)
+    if(DI > D/2)
     {
-        mes1A = "Внешний диаметр должен быть больше чем внутренний.";
+        mes1A = "Внутрений диаметр должен быть меньше, чем половина внешнего.";
         furst_string = false;
         error = true;
     }
@@ -1206,6 +1111,11 @@ qDebug() << Vcalc;
 
             error = true;
         }
+        if(V < 10 || V > 250)
+        {
+          mes1A = "Введено недопустимое значение объема";
+          error = true;
+        }
 
         if(error)
         {
@@ -1217,6 +1127,40 @@ qDebug() << Vcalc;
         mes1A.clear();
         error = false;
 //=============================================
+        if (H<140)
+        {
+            mes1A = "Высота бака слишком мала";
+
+            MBtextErr(mes1A, mes01);
+            return false;
+        }
+        furst_string = true;
+        mes1A.clear();
+        error = false;
+//=============================================
+                if (D<140)
+                {
+                    mes1A = "Внешний диаметр бака слишком мал";
+
+                    MBtextErr(mes1A, mes01);
+                    return false;
+                }
+                furst_string = true;
+                mes1A.clear();
+                error = false;
+//=============================================
+                        if (D>1200)
+                        {
+                            mes1A = "Внешний диаметр бака слишком велик";
+
+                            MBtextErr(mes1A, mes01);
+                            return false;
+                        }
+                        furst_string = true;
+                        mes1A.clear();
+                        error = false;
+//=============================================
+
 if (H<Size_B_min)
 {
        mes1A.append(mes1);
@@ -1545,17 +1489,17 @@ QString MainWindow::getSetupTank()
         }
     }
     if(DataParam.CurFormaSelect == 3){
-        if(ui->comboBox_Param->currentIndex() < DataParam.Num_BochkaV)
+        if(ui->comboBox_Param->currentIndex() < DataParam.Num_BochkaH)
         {
-        outputData = DataParam.Chislo_BochkaV.at(ui->comboBox_Param->currentIndex());
+        outputData = DataParam.Chislo_BochkaH.at(ui->comboBox_Param->currentIndex());
         } else {
         qDebug() <<  "Error 3";
         }
     }
     if(DataParam.CurFormaSelect == 4){
-        if(ui->comboBox_Param->currentIndex() < DataParam.Num_BochkaH)
+        if(ui->comboBox_Param->currentIndex() < DataParam.Num_BochkaV)
         {
-        outputData = DataParam.Chislo_BochkaH.at(ui->comboBox_Param->currentIndex());
+        outputData = DataParam.Chislo_BochkaV.at(ui->comboBox_Param->currentIndex());
         } else {
         qDebug() <<  "Error 4";
         }
@@ -1697,7 +1641,7 @@ void MainWindow::on_radioButton_F3_func()
     ui->frame_radio->show();
 
     DataParam.CurFormaSelect = 3;
-    if(!CylPosition) DataParam.CurFormaSelect++;
+    if(CylPositionV) DataParam.CurFormaSelect++;
 
     if(DataParam.init)
     {
@@ -1709,17 +1653,54 @@ void MainWindow::on_radioButton_F3_func()
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 void MainWindow::on_radioButton_H_clicked()
 {
-    CylPosition = false;
+    CylPositionV = false;
     DataParam.CurFormaSelect = 3;
      CylPositionShow();
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 void MainWindow::on_radioButton_V_clicked()
 {
-    CylPosition = true;
+    CylPositionV = true;
     DataParam.CurFormaSelect = 4;
      CylPositionShow();
 
 
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+void MainWindow::RefreshPorts()
+{
+    bool exist_vendor;
+    quint16 vendor_id2;
+    quint16 product_id2;
+
+    ui->comboBox->clear();
+
+    const auto infos = QSerialPortInfo::availablePorts();
+    for (const QSerialPortInfo &info : infos)
+    {
+
+        exist_vendor = true;
+        if(info.hasVendorIdentifier()){
+            vendor_id2 = info.vendorIdentifier();
+        } else {
+        exist_vendor = false;
+        }
+                qDebug() << "Has Product id" << info.hasProductIdentifier();
+                if(info.hasProductIdentifier()){
+                    product_id2 = info.productIdentifier();
+                }else {
+                exist_vendor = false;
+                }
+        if((exist_vendor)&&(vendor_id == vendor_id2)&&(product_id == product_id2))
+        {
+           ui->comboBox->addItem(info.portName());
+        }
+    }
+    // end search port
+
+    if(ui->comboBox->count() == 0)
+    {
+    ui->pushButton->setText(st_btn_search);
+    }
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB

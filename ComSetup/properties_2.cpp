@@ -16,7 +16,7 @@ const  QString mes01 = "Предупреждение о некорректном
 const  QString mes1 = "Обратите внимание, что параметры вводятся не в <b>см</b>, а в <b>мм</b>. Вы уверены, что ";
 const  QString mes5 = "Значение объема слишком ";
 const  QString mes8 = "Датчик не подключен. Повторите ";
-const  QString mes9 = "Датчик не подключен. Выберите нужный датчик из списка устройств и нажмите кнопку  ";
+const  QString mes9 = "Датчик не подключен. Выберите нужный датчик из списка устройств и нажмите кнопку ";
 
 
 const char * st_get_display3a = "both";
@@ -122,6 +122,9 @@ void Properties_2::on_pushButton_PR_cansel_clicked()
   //qDebug() << SetupParamDopB;
     Properties = false;
     hide();
+  //  close();
+   // destroyed();
+   // ~Properties_2();
 
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB

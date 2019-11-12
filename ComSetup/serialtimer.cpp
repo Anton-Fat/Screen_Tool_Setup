@@ -6,6 +6,8 @@
 #include <QSerialPort>
 #include <QTime>
 
+#define      timeStatus     1000
+
 
 SerialTimer::SerialTimer(QObject *parent):
     QThread(parent)
@@ -21,8 +23,9 @@ SerialTimer::SerialTimer(QObject *parent):
  void SerialTimer::run()
  {
        qDebug() << "Kostil run";
-       int countTime;
+       int countTime, countStatus;
        QString str;
+       countStatus = 0;
 
        while (!m_quit) {
 
@@ -30,6 +33,7 @@ SerialTimer::SerialTimer(QObject *parent):
 
         if (on_timer && ComConnect) {
         end = false;
+        countStatus = 0;
         countTime = Count_time/10;
 
         while (countTime!=0)
@@ -47,6 +51,15 @@ SerialTimer::SerialTimer(QObject *parent):
         emit this->pop(str, Count);        // ---
         on_timer = false;
         end = true;
+        }   // on_timer
+        if (!on_timer && ComConnect) {
+            countStatus++;
+            if(countStatus == timeStatus/100)
+            {
+            emit this->status(1);
+            countStatus = 0;
+            }
+
         }
 
        } // while

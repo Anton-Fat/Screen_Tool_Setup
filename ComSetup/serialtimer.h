@@ -27,6 +27,7 @@ public:
 
 signals:
     void pop(const QString &s, int res);
+    void status(int res);
 
 private:
     void run() override;

@@ -68,6 +68,8 @@ private slots:
 
     void realPop(const QString &s1, int res);
 
+    void realStatus(int res);
+
     void on_pushButton_2_clicked();
 
     void on_pushButton_3_clicked();
@@ -75,11 +77,6 @@ private slots:
     void on_pushButton_test_clicked();
 
     void on_pb_Add_Parametr_clicked();
-
-    void on_spinBox_H_editingFinished();
-
-    void on_spinBox_D_editingFinished();
-
 
     void on_checkBox_stateChanged(int arg1);
 
@@ -93,8 +90,6 @@ private slots:
 
     void on_radioButton_V_clicked();
 
-
-    void on_spinBox_V_editingFinished();
 
 private:
     Ui::MainWindow *ui;
@@ -127,6 +122,7 @@ private:
     void on_radioButton_F2_func(void);
     void on_radioButton_F3_func(void);
     QString getSetupTank();
+    void RefreshPorts();
 
     Properties_2 *ad;
 
