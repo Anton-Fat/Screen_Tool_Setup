@@ -23,8 +23,8 @@ QStringList  set_list;
 QStringList  get_list;
 QStringList  Display;
 
-const char * st_version = "0.6";
-const char * st_manual = "(тут ссылка)";
+const char * st_version = "0.7";
+const char * st_manual = "<a href=\http://ks2tools.ru/prop\">ссылке</a>";
 const char * st_help = "help@ks2corp.com";
 const char * file_param = "Param.txt";
 
@@ -154,14 +154,20 @@ MainWindow::MainWindow(QWidget *parent) :
     RefreshPorts();
 
     ui->label_prog_1->setText(st_version);
-    ui->label_prog_2->setText("KS2 Engineering");
+    ui->label_prog_2->setText("KS2");
     ui->label_prog_3->setText(st_help);
-    MesLabel = "Если есть вопросы, ознакомьтесь с руководством пользователя по ссылке ";
+    MesLabel = "Если есть вопросы, ознакомьтесь с руководством пользователя по ";
  //   MesLabel.append(split_str);
     MesLabel.append(st_manual);
-    MesLabel.append(" или пишите на почту ");
+    MesLabel.append(" или напишите на почту ");
     MesLabel.append(st_help);
+    MesLabel.append(".");
     ui->label_prog_4->setText(MesLabel);
+
+
+    ui->label_prog_4->setTextFormat(Qt::RichText);
+    ui->label_prog_4->setTextInteractionFlags(Qt::TextBrowserInteraction);
+    ui->label_prog_4->setOpenExternalLinks(true);
 
     // setup UI
     if(true)
@@ -880,13 +886,8 @@ void MainWindow::on_pb_Add_Parametr_clicked()
     x = this->geometry().x();
     y = this->geometry().y();
 
-    offset_x = 50;
+    offset_x = 25;
     offset_y = 200;
-
-    qDebug() << "x = ";
-    qDebug() << x;
-    qDebug() << "y = ";
-    qDebug() << y;
 
     // QApplication::desktop()->screenGeometry();
 

@@ -9,7 +9,7 @@ QT       += core gui serialport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = ComSetup
+TARGET = KS2PROP
 TEMPLATE = app
 
 RC_ICONS += KS2_logo2.ico
