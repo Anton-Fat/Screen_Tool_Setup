@@ -54,9 +54,18 @@ SerialTimer::SerialTimer(QObject *parent):
         }   // on_timer
         if (!on_timer && ComConnect) {
             countStatus++;
-            if(countStatus == timeStatus/100)
+            if(countStatus >= timeStatus/100)
             {
             emit this->status(1);
+            countStatus = 0;
+            }
+
+        }
+        if (!ComConnect) {
+            countStatus++;
+            if(countStatus >= timeStatus * 3/100)
+            {
+            emit this->status(2);
             countStatus = 0;
             }
 

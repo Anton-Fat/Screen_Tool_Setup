@@ -1,3 +1,4 @@
+// #include <Windows.h>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 // #include "properties_2.h"
@@ -7,8 +8,13 @@
 #include <QDebug>
 #include <QThread>
 
+//#include <QMoveEvent>
+
 #include <QPainter>
 #include <QtWidgets>
+
+//#include <windows.h>  // scale
+#include <QtGlobal>
 
 QSerialPort *serial;
 
@@ -23,7 +29,7 @@ QStringList  set_list;
 QStringList  get_list;
 QStringList  Display;
 
-const char * st_version = "0.7";
+const char * st_version = "0.91 Beta";
 const char * st_manual = "<a href=\http://ks2tools.ru/prop\">ссылке</a>";
 const char * st_help = "help@ks2corp.com";
 const char * file_param = "Param.txt";
@@ -60,6 +66,9 @@ const    QString metkaBochkaV = "Cyl.V";
 const    QString metkaCustom = "99";
 const    QString metkaNone = "None";
 const    QString metkaOK = "ok";
+
+const    QString CMDdriverquery = "driverquery";
+const    QString CMDfindstr = "findstr \"VID_0483&PID_5740\" *.inf";
 const char * st_set_Bublik = "T";
 const char * st_set_Vatruchka = "P";
 const char * st_set_BochkaH = "H";
@@ -75,15 +84,21 @@ const quint16 Size_B_max = 1000;
 const quint16 Size_V_min = 70;
 const quint16 Size_V_max = 110;
 
+const float DEFAULT_DPI = 100.0;
+
 QByteArray requestData;
 QByteArray sendData;
 
 quint8 NumParam;
 
+int Hmain;
+int nLastEvent;
+
 
 // Dynamic widget
 QStringList  DW_radio_text;
 bool CylPositionV;
+QString ReadCMD, WorkPathCMD, CommandCMD;
 
 
 enum Liquid
@@ -111,6 +126,13 @@ MainWindow::MainWindow(QWidget *parent) :
         ui->tabWidget->setStyleSheet("padding: 2px 2px 2px 2px");   /* top - right - bottom - left */
 
         ui->groupBox_2->setStyleSheet("border: 0px;");
+
+        QString green= "QProgressBar::chunk {background: QLinearGradient( x1: 0, y1: 0, x2: 1, y2: 0.2,stop: 0 #11AF50,stop: 0.4 #119F80,stop: 0.7 #319F80,stop: 1 #11AF50 );"
+                      "border-radius: 8px;border: 1px solid black;}";
+        ui->progressBar->setStyleSheet(green);
+        ui->progressBar->setMaximum(0); ui->progressBar->setMinimum(0);
+
+        ui->progressBar->hide();
 
     // -----------------------------------------------
         ui->pushButton->setStyleSheet(BorderButton);
@@ -280,7 +302,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
    // ui->label_status->setText(st_btn_no_connect);
 
-  //  adjustSize();
+  //  UpdateSizeWin();
+
+
 
 
 }
@@ -293,6 +317,65 @@ MainWindow::~MainWindow()
     serial->close();
     }
 
+}
+
+void MainWindow::moveEvent(QMoveEvent *event)
+{
+
+    // const QPoint & QMoveEvent::oldPos() const
+    QMoveEvent *moveEvent = static_cast<QMoveEvent*>(event);
+
+    QPoint pos = moveEvent->oldPos();
+
+qDebug()<< "pos" << pos;
+
+    UpdateSizeWin();
+
+    qDebug()<<"Move detected";
+
+    event->accept();
+}
+// FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+void MainWindow::StartWaitBar()
+{
+    ui->progressBar->show();
+}
+// FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+void MainWindow::StopWaitBar()
+{
+    ui->progressBar->hide();
+}
+
+// FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+bool MainWindow::UpdateSizeWin()
+{
+
+    // Size scale SSSSS
+    int Hcalc;
+
+
+    HDC screen = GetDC( 0 );
+    qDebug() << "HDC screen = " << screen;
+
+
+    QRect r = QApplication::desktop()->screenGeometry();
+    qDebug() << "r = " << r;
+
+    adjustSize();
+    resize(width(),height()+1);  // Magic!
+
+    Hmain = height();
+    Hcalc = r.size().height() * PERCENT_OF_SCREEN_H;
+    if (Hcalc < Hmain)
+    {
+    resize(width(),Hcalc);
+    }
+
+
+    qDebug() << "W = " << width() << ", H = " << height();
+    qDebug() << "Hcalc = " << r.size().height() * PERCENT_OF_SCREEN_H;
+
+    return true;
 }
 void MainWindow::realPush(const QString &s1, int res)   // >>>
 {
@@ -420,6 +503,10 @@ void MainWindow::realStatus(int res)
     }
 
     } // res 1
+    if(res == 2)
+    {
+     RefreshPorts();
+    }  // res 2
 
 }
 void MainWindow::realPop(const QString &s1, int res)   // <<<
@@ -643,6 +730,7 @@ void MainWindow::on_pushButton_clicked()
 {
     NumPressButton = btn_connect;
     QString  outputData;
+    bool Output;
 
 if(ui->comboBox->count() == 0)
 {
@@ -651,10 +739,24 @@ qDebug() << "New find";
 
 // search valid port --------------------------------
 
-RefreshPorts();
+ if(RefreshPorts() == false)
+ {
+qDebug() << "Message Diagnostiks";
 
-if(ui->comboBox->count() != 0)
-ui->pushButton->setText(st_btn_connect);
+
+    Output = MBtextSimple(" ", mes7, "Диагностика", "Отмена");
+    if(Output)
+    {
+    if(RefreshPorts() == false)
+    {
+    qDebug() << "Diagnostiks is run";
+    DiagnosticsDriver();
+    }
+
+    }
+
+ }
+
 
 } else {
 
@@ -711,6 +813,143 @@ void MainWindow::reOpenPort()
     }
     }
    }
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+bool MainWindow::DiagnosticsDriver()
+{
+  bool output, res;
+  output = true;
+  QStringList  Drive;
+  QString TmpFileName;
+  QString Path, Path2;
+  QString temp;
+
+  QProcess gitProcess;
+  QDir binDir(Path);
+
+  StartWaitBar();
+
+  Path = binDir.absolutePath();
+
+  Path = binDir.rootPath();
+
+  QStringList env_list(QProcess::systemEnvironment());
+
+  int idx = env_list.indexOf(QRegExp("^WINDIR=.*", Qt::CaseInsensitive));
+  if (idx > -1)
+  {
+      QStringList windir = env_list[idx].split('=');
+      qDebug() << "Var : " << windir[0];
+      qDebug() << "Path: " << windir[1];   // <<<<<
+      Path2 = windir[1];
+  }
+
+  Path2.append("\\");
+  Path2.append("inf");
+
+   qDebug() << "1333 " << Path;
+   qDebug() << "Path2 = " << Path2;
+
+    temp = '\\';
+
+
+  foreach( QFileInfo drive, QDir::drives() )
+  {
+  Drive.append(drive.absolutePath());
+  }
+
+  qDebug() << "Drive: " <<Drive.at(0);
+
+  WorkPathCMD = Path2;
+  CommandCMD = CMDfindstr;
+  SuperCmdRun(CommandCMD, 1);
+
+return output;
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+void MainWindow::SuperCmdRun(QString command, int exeCode)
+{
+    ReadCMD.clear();
+    p.setWorkingDirectory(WorkPathCMD);
+    p.connect(&p, &QProcess::readyReadStandardOutput,
+                  this, &MainWindow::on_process_readyReadStandardOutput);
+    p.connect(&p, (void (QProcess::*)(int,QProcess::ExitStatus))&QProcess::finished,
+                  this, &MainWindow::on_process_finished);
+
+    p.start(command);
+
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+void MainWindow::on_process_finished(int exitCode, QProcess::ExitStatus exitStatus)
+{
+    QString perr = p.readAllStandardError();
+    if (perr.length())
+        qDebug() << "Error during download.\n" << perr;
+    else
+    {
+
+        qDebug() << "Download completed!";
+        // Analize
+        StopWaitBar();
+        if(CMDAnalise(CommandCMD))
+        {
+        qDebug() << "Driver Found !!!";
+        MBtextErr("Ошибки не обнаружены, подключите датчик KS2 PROP1 к компьютеру.", mes02);
+
+        } else {
+        qDebug() << "Driver Not Found.";
+        MBtextErr("Драйвер Virtual COM Port не найден, попробуйте переустановить программу.", mes02);
+        }
+    }
+
+}
+bool MainWindow::CMDAnalise(QString command)
+{
+    QString metka1, metka2;
+    int metkaPos1, metkaPos2;
+
+    if (command == CMDdriverquery)
+    {
+
+    metka1 = "STM Virtual COM Port";
+    metka2 = "usbser";
+    if (ReadCMD.contains(metka1, Qt::CaseInsensitive))
+    {
+        metkaPos1 = ReadCMD.indexOf(metka1);
+         qDebug() << "metkaPos = " << metkaPos1;
+        if (ReadCMD.contains(metka2, Qt::CaseInsensitive))
+        {
+             metkaPos2 = ReadCMD.indexOf(metka2);
+                if(metkaPos2 - metkaPos1 < 50)
+                {
+                return true;
+                }
+        }
+    }
+    } // command
+    // -----------------------------
+    if (command == CMDfindstr)
+    {
+    metka1 = "VID_0483&PID_5740";
+    if (ReadCMD.contains(metka1, Qt::CaseInsensitive))
+    {
+        qDebug() << "find VID_0483&PID_5740 ";
+    return true;
+    }
+    } // command
+return false;
+}
+void MainWindow::on_process_readyReadStandardOutput()
+{
+    QString Output;
+    Output.clear();
+    p.setReadChannel(QProcess::StandardOutput);
+    QTextStream stream(&p);
+    while (!stream.atEnd()) {
+        QString line = stream.readLine();
+        // extract progress info from line and etc.
+        ReadCMD.append(line);
+    }
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 void MainWindow::on_pushButton_2_clicked()
@@ -906,8 +1145,12 @@ if (obj == ui->pb_Add_Parametr)
 
        //   return true;
       }
-
 }
+if (nLastEvent == QEvent::Move && evt->type() == 173)
+   {
+
+    qDebug()<<"Move detected Filter";
+   }
   return false;
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
@@ -916,9 +1159,6 @@ void MainWindow::FormaShow(bool *Forma)
     if(*Forma == false)
     {
     *Forma = true;
-
-    //adjustSize();
-  //  resize(width(),600);
 
     qDebug()<<"Add forma";
     }  // Forma
@@ -977,7 +1217,24 @@ bool MainWindow::MBtext(QString mes)
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 bool MainWindow::MBtextS(QString mes1, QString mes2)
 {
+bool Output;
 
+    Output = MBtextSimple(mes0, mes1, "Да, параметры введены верно", "Исправить");
+
+    if(Output)
+    {
+        // Yes button was pressed
+        QMessageBox msgBox;
+        msgBox.setWindowTitle(" ");
+        msgBox.setText(mes2);
+        msgBox.exec();
+    }
+
+   return Output;
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+bool MainWindow::MBtextSimple(QString mes0, QString mes1, QString mesYes, QString mesNo)
+{
      QMessageBox* pmbx =
                new QMessageBox(mes0,
                                mes1, // "<i>Simple</i> <u>Message</u>",
@@ -986,25 +1243,15 @@ bool MainWindow::MBtextS(QString mes1, QString mes2)
                                QMessageBox::No,
                                QMessageBox::NoButton //QMessageBox::Cancel | QMessageBox::Escape
                               );
-
-             pmbx->setButtonText(QMessageBox::Yes,"Да, параметры введены верно");
-             pmbx->setButtonText(QMessageBox::No,"Исправить");
+             pmbx->setButtonText(QMessageBox::Yes,mesYes);
+             pmbx->setButtonText(QMessageBox::No,mesNo);
            int n = pmbx->exec();
            delete pmbx;
-
-           // NoButton
-
            if (n == QMessageBox::Yes) {
-               // Yes button was pressed
-               QMessageBox msgBox;
-               msgBox.setWindowTitle(" ");
-               msgBox.setText(mes2);
-               msgBox.exec();
+           return true;
            }
            if (n == QMessageBox::No) {
-
             return false;
-
            }
    return true;
 }
@@ -1172,10 +1419,6 @@ if (H<Size_B_min)
 
        error = true;
 
-//  mes = mes1+Dval+" мм, и высота "+Hval+" мм?";
-//  CorrectValH = MBtext(mes1A);
-//  if(CorrectValH) AllValCorrect(); //CorrectValD = true;
-//  return false;
 } //
 if (H>Size_B_max)
 {
@@ -1260,9 +1503,10 @@ void MainWindow::on_checkBox_stateChanged(int arg1)
             Hand = true;
             ui->frame_2->show();
             ui->widget_combo->hide();
-
         }
+
     }
+    UpdateSizeWin();
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 bool MainWindow::SaveToFile(QString name, QString text)
@@ -1324,7 +1568,6 @@ Stringi MainWindow::ParamAnalise(QStringList  Input_text) // DW_radio_text
     QString subStr;
 
     int metkaPos;
-
 
     bool numfind = false;
 
@@ -1668,7 +1911,7 @@ void MainWindow::on_radioButton_V_clicked()
 
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-void MainWindow::RefreshPorts()
+bool MainWindow::RefreshPorts()
 {
     bool exist_vendor;
     quint16 vendor_id2;
@@ -1702,6 +1945,15 @@ void MainWindow::RefreshPorts()
     if(ui->comboBox->count() == 0)
     {
     ui->pushButton->setText(st_btn_search);
+    } else {
+    ui->pushButton->setText(st_btn_connect);
+    return true;
     }
+return false;
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+void MainWindow::on_checkBox_toggled(bool checked)
+{
+   UpdateSizeWin();
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB

@@ -9,6 +9,10 @@
 #include <QMainWindow>
 #include <QSerialPort>
 
+#include <QProcess>
+//#include <QMoveEvent>
+
+
 
 
 #define      res_none     0
@@ -18,6 +22,9 @@
 #define      res_deadvol  4
 #define      res_custom   6
 #define      res_tank     7
+
+#define PERCENT_OF_SCREEN_H 90 / 100
+// #define PERCENT_OF_SCREEN_W 40 / 100
 
 #define      testenable   false
 
@@ -56,6 +63,9 @@ public:
     SendlerClass SchwartzPower;
     SerialTimer  SerialKostil;
 
+protected:
+    void moveEvent(QMoveEvent *event);
+
 private slots:
     void on_pushButton_clicked();
 
@@ -91,6 +101,8 @@ private slots:
     void on_radioButton_V_clicked();
 
 
+    void on_checkBox_toggled(bool checked);
+
 private:
     Ui::MainWindow *ui;
 
@@ -99,10 +111,14 @@ private:
 
     bool eventFilter(QObject *obj, QEvent *evt);
 
+    void StartWaitBar();
+    void StopWaitBar();
+    bool UpdateSizeWin();
     void FormaShow(bool *Forma);
     void HandShow(bool *Hand);
     bool MBtext(QString mes);
     bool MBtextS(QString mes, QString mes2);
+    bool MBtextSimple(QString mes0, QString mes1, QString mesYes, QString mesNo);
     void MBtextErr(QString mes1, QString mes2);
     bool MBok();
     void AllValCorrect();
@@ -114,6 +130,7 @@ private:
     Stringi ParamAnalise(QStringList  Input_text);
     QString FindChislo(QString Input, int Index);
     void CylPositionShow();
+    bool DiagnosticsDriver();
 
     bool removeEcho(QString *Input);
     bool removeEnd(QString *Input);
@@ -122,9 +139,17 @@ private:
     void on_radioButton_F2_func(void);
     void on_radioButton_F3_func(void);
     QString getSetupTank();
-    void RefreshPorts();
+    bool RefreshPorts();
+    void SuperCmdRun(QString command, int exeCode);
+    void on_process_finished(int exitCode, QProcess::ExitStatus exitStatus);
+    void on_process_readyReadStandardOutput();
+    bool CMDAnalise(QString command);
+
+   // float windowsDpiScale();
 
     Properties_2 *ad;
+
+    QProcess p;
 
 };
 
