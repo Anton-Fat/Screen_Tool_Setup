@@ -37,6 +37,7 @@ CONFIG +=   static \
             no-exceptions
 
 SOURCES += \
+        kalibration.cpp \
         main.cpp \
         mainwindow.cpp \
         properties_2.cpp \
@@ -44,12 +45,14 @@ SOURCES += \
         serialtimer.cpp
 
 HEADERS += \
+        kalibration.h \
         mainwindow.h \
         properties_2.h \
         sendlerclass.h \
         serialtimer.h
 
 FORMS += \
+        kalibration.ui \
         mainwindow.ui \
         properties_2.ui
 

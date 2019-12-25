@@ -11,9 +11,13 @@
 #define     btn_cansel     3
 #define     btn_setup_dop  4
 #define     btn_cansel_dop 5
+#define     btn_full       6
+#define     btn_empty      7
+#define     btn_reset      8
 
 
 extern const QString BorderButton;
+extern const QString BorderButtonK;
 extern int NumPressButton;
 
 
@@ -31,6 +35,7 @@ extern const  QString mes7;
 extern const  QString mes8;
 extern const  QString mes9;
 extern const  QString mes5;
+extern const  QString mes12;
 
 extern bool Properties;
 extern bool ComConnect;

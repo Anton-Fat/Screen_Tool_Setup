@@ -29,7 +29,7 @@ QStringList  set_list;
 QStringList  get_list;
 QStringList  Display;
 
-const char * st_version = "0.91 Beta";
+const char * st_version = "0.95";
 const char * st_manual = "<a href=\http://ks2tools.ru/prop\">ссылке</a>";
 const char * st_help = "help@ks2corp.com";
 const char * file_param = "Param.txt";
@@ -38,6 +38,7 @@ const char * st_btn_search = "Поиск";
 const char * st_btn_connect = "Подключить";
 const char * st_btn_disconnect = "Отключить";
 const char * st_btn_no_connect = "Нет подключения";
+const char * st_btn_change = "Исправить";
 
 const char * st_incorrect = "Несовместимые параметры";
 
@@ -54,6 +55,10 @@ const char * st_set_liq = "liquid";
 const char * st_set_mix = "mix";           // 3
 const char * st_set_deadvol = "deadvol";  // 4
 const char * st_set_custom = "custom";
+const char * st_set_volume = "volume";
+const char * st_set_full = "full";
+const char * st_set_empty = "empty";
+const char * st_set_default = "default";
 
 const char * st_set = "set ";
 const char * st_get = "get ";
@@ -118,9 +123,20 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->pb_Add_Parametr->installEventFilter(this);
 
     Properties = false;
+    PingPong = false;
+    verHW = 0;
+    KalibrationView(false);
 
     // ---------------------------------------------------------------
     // Setup images
+
+    QDate date;
+    date = QDate::currentDate();
+    if((date.month() == 12)&&(date.day() >24))
+    {
+     setWindowIcon(QIcon(":/KS2_logo_New.ico"));
+    }
+
     QString MesLabel;
 
         ui->tabWidget->setStyleSheet("padding: 2px 2px 2px 2px");   /* top - right - bottom - left */
@@ -138,6 +154,8 @@ MainWindow::MainWindow(QWidget *parent) :
         ui->pushButton->setStyleSheet(BorderButton);
         ui->pushButton_2->setStyleSheet(BorderButton);
         ui->pushButton_3->setStyleSheet(BorderButton);
+        ui->pushButton_Reset->setStyleSheet(BorderButton);
+        ui->pb_Kalibrovka_help->setStyleSheet(BorderButtonK);
 
     // ---------------------------------------------------------------
 
@@ -157,7 +175,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // search valid port --------------------------------
 
-    NumParam = 6;
+    NumParam = base_num_param; // + kal_num_param
 
     // -------------------------------------
 
@@ -204,6 +222,9 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->label_dev->setPalette(sample_palette);
     ui->label_ver->setPalette(sample_palette);
 
+    ui->label_kal->setPalette(sample_palette);
+
+
     ui->label_prog_1->setPalette(sample_palette);
     ui->label_prog_2->setPalette(sample_palette);
     ui->label_prog_3->setPalette(sample_palette);
@@ -243,6 +264,13 @@ MainWindow::MainWindow(QWidget *parent) :
         set_list.append(st_set);
         set_list.last().append(st_get_tank);
 
+        set_list.append(st_set);
+        set_list.last().append(st_set_full);
+        set_list.append(st_set);
+        set_list.last().append(st_set_empty);
+        set_list.append(st_set);
+        set_list.last().append(st_set_default);
+
         get_list.append(st_get);
         get_list.last().append(st_get_did);
         get_list.append(st_get);
@@ -258,6 +286,13 @@ MainWindow::MainWindow(QWidget *parent) :
         get_list.last().append(st_set_liq);     // mix
         get_list.append(st_get);
         get_list.last().append(st_set_deadvol);
+        get_list.append(st_get);
+        get_list.last().append(st_set_volume);
+
+        get_list.append(st_get);
+        get_list.last().append(st_set_full);
+        get_list.append(st_get);
+        get_list.last().append(st_set_empty);
 
         // setup get value
         if(!testenable){
@@ -305,7 +340,8 @@ MainWindow::MainWindow(QWidget *parent) :
   //  UpdateSizeWin();
 
 
-
+    kal = new Kalibration(); // this
+    kal->setWindowFlags(kal->windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
 }
 
@@ -394,7 +430,7 @@ void MainWindow::realPush(const QString &s1, int res)   // >>>
 
             } else {
                 ui->label_status->setText(st_incorrect);
-                MBtextErr(st_incorrect, mes01);
+                MBtextErr(st_incorrect, mes01, st_btn_change);
             }
         }
     if(res == -2)
@@ -442,6 +478,9 @@ void MainWindow::realPush(const QString &s1, int res)   // >>>
             case res_tank:
                 str.append(' ');
                 str.append(metkaCustom);
+
+            break;
+            case res_kal:
 
             break;
 
@@ -498,7 +537,7 @@ void MainWindow::realStatus(int res)
     {
     qDebug() << "Serial is not open !";
     ui->pushButton->click();
-    MBtextErr("Датчик отключен. Проверьте подключение датчика к компьютеру.", "Ошибка");
+    MBtextErr("Датчик отключен. Проверьте подключение датчика к компьютеру.", "Ошибка", st_btn_change);
     RefreshPorts();
     }
 
@@ -549,7 +588,52 @@ void MainWindow::realPop(const QString &s1, int res)   // <<<
         qDebug()<<"btn cansel";
 
     break;
+    case btn_full:
+    if(fi==1){
+    ParamKalVal[0] = Input.toInt();
+    if(!CheckKal())
+    {
+       PingPong = false;
+       MBtextErr("В ходе калибровки произошла ошибка. Сообщите о проблеме в техническую поддержку.", "Ошибка", st_btn_change);
+    }
+    qDebug() << "ParamVolume = " << ParamKalVal[0];
+    }
+    if(fi==2){
+        //ParamFull = Input;
 
+        ParamKalVal[1] = Input.toInt();
+        ui->label_kal->setText(GetKalString());
+        if(ParamKalVal[2]==0)
+        {
+        MBtextErr("Теперь проведите калибровку для пустого бака.", " ", "Ok");
+        } else {
+        MBtextInfo("Датчик откалиброван.", " ", "Ok");
+        }
+
+    }
+    break;
+    case btn_empty:
+        if(fi==1){
+        ParamKalVal[0] = Input.toInt();
+        if(!CheckKal())
+        {
+           PingPong = false;
+           MBtextErr("В ходе калибровки произошла ошибка. Сообщите о проблеме в техническую поддержку.", "Ошибка", st_btn_change);
+        }
+        qDebug() << "ParamVolume = " << ParamKalVal[0];
+    }
+    if(fi==2){
+        //ParamEmpty = Input;
+        ParamKalVal[2] = Input.toInt();
+        ui->label_kal->setText(GetKalString());
+        if(ParamKalVal[1]==0)
+        {
+        MBtextErr("Теперь проведите калибровку для полного бака.", " ", "Ok");
+        } else {
+         MBtextInfo("Датчик откалиброван.", " ", "Ok");
+        }
+        }
+    break;
     }
 
     if( NumPressButton == btn_connect)
@@ -585,7 +669,6 @@ void MainWindow::realPop(const QString &s1, int res)   // <<<
           //  QStringList list;
             QString dev, ver;
 
-
             list2 = Input.split(' ');
 
             if(list2.size() > 1)
@@ -593,6 +676,14 @@ void MainWindow::realPop(const QString &s1, int res)   // <<<
                 dev = list2.at(0);
                 list2.removeFirst();
                 ver = list2.join(' ');
+
+               Setup = FindChislo(ver, 1);
+               verHW = Setup.toDouble();
+               Setup = FindChislo(ver, 0);
+               verHW += Setup.toDouble()*100;
+
+               KalibrationView(verHW >= verHW_kal);
+
              ui->label_dev->setText(dev);
              ui->label_ver->setText(ver);
             }
@@ -603,8 +694,6 @@ void MainWindow::realPop(const QString &s1, int res)   // <<<
             list2 = Input.split(split_str);
 
             DataParam = ParamAnalise(list2);
-
-         //   qDebug() << "Custom "+DataParam.Custom;
 
             Setup = FindChislo(DataParam.Custom, 0);
             if(Setup != metkaNone)
@@ -687,10 +776,31 @@ void MainWindow::realPop(const QString &s1, int res)   // <<<
 
             SetupParamDopVal[3] = Input.toInt();
 
-            NumSendMessage = 0;
+            if(KalUiEnable == false) NumSendMessage = 0;
 
             } else if (NumSendMessage == 8) {
+            // volume
+            qDebug() << "volume = " << Input;
+            ParamKalVal[0] = Input.toInt();
+
+            } else if (NumSendMessage == 9) {
+            // full
+            qDebug() << "full = "  << Input;
+            ParamKalVal[1] = Input.toInt();
+
+            } else if (NumSendMessage == 10) {
+            // empty
+            QString kal;
+            qDebug() << "empty = " << Input;
+            ParamKalVal[2] = Input.toInt();
+
+            kal = GetKalString();
+            ui->label_kal->setText(kal);
+
             NumSendMessage = 0;
+            }
+            if(NumSendMessage == 0){
+            ui->pushButton->setEnabled(true);
             }
 
         // NumParam
@@ -722,7 +832,7 @@ void MainWindow::serialReceived()
    Input = true;
    SerialKostil.Input_K = true;
    SerialKostil.Count++;
-   SerialKostil.DataInput += serial->readAll();;
+   SerialKostil.DataInput += serial->readAll();
 
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
@@ -779,6 +889,8 @@ qDebug() << "Message Diagnostiks";
 
              outputData = get_list.at(0);
              outputData.append('\r');
+
+             ui->pushButton->setEnabled(false);
 
              writeData(outputData.toLocal8Bit());
 
@@ -894,11 +1006,11 @@ void MainWindow::on_process_finished(int exitCode, QProcess::ExitStatus exitStat
         if(CMDAnalise(CommandCMD))
         {
         qDebug() << "Driver Found !!!";
-        MBtextErr("Ошибки не обнаружены, подключите датчик KS2 PROP1 к компьютеру.", mes02);
+        MBtextErr("Ошибки не обнаружены, переподключите датчик KS2 PROP1 к компьютеру.", mes02, st_btn_change);
 
         } else {
         qDebug() << "Driver Not Found.";
-        MBtextErr("Драйвер Virtual COM Port не найден, попробуйте переустановить программу.", mes02);
+        MBtextErr("Драйвер Virtual COM Port не найден, попробуйте переустановить программу.", mes02, st_btn_change);
         }
     }
 
@@ -1015,7 +1127,8 @@ void MainWindow::on_pushButton_2_clicked()
               outputData.append(' ');
               outputData.append(ui->spinBox_H->text());
               outputData.append(' ');
-              outputData.append(ui->spinBox_V->text());
+              outputData.append(ui->spinBox_V->text());            
+              ParamKalVal[3] = ui->spinBox_V->value();
               if(DataParam.CurFormaSelect == 1){
               outputData.append(' ');
               outputData.append(ui->spinBox_DI->text());
@@ -1112,27 +1225,7 @@ void MainWindow::on_pushButton_test_clicked()
 
     }
 }
-// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-void MainWindow::on_pb_Add_Parametr_clicked()
-{
 
-    ad = new Properties_2(); // this
-    ad->show();
-    // position
-
-    int x, y, offset_x, offset_y;
-
-    x = this->geometry().x();
-    y = this->geometry().y();
-
-    offset_x = 25;
-    offset_y = 200;
-
-    // QApplication::desktop()->screenGeometry();
-
-    ad->move(x+offset_x, y+offset_y);
-
-}
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 bool MainWindow::eventFilter(QObject *obj, QEvent *evt)
 {
@@ -1202,6 +1295,42 @@ void MainWindow::HandShow(bool *Hand)
     qDebug()<<"down hand";
     }
 }
+
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+QString MainWindow::GetKalString()
+{
+QString out, temp;
+
+            out.sprintf("%04d", ParamKalVal[2]);
+            out.append(" / ");
+            temp.sprintf("%04d", ParamKalVal[1]);
+            out.append(temp);
+return out;
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+bool MainWindow::CheckKal()
+{
+    bool out = true;
+
+qDebug() << "Param ====== " ;
+qDebug() << ParamKalVal[0];
+qDebug() << ParamKalVal[1];
+qDebug() << ParamKalVal[2];
+
+  //  if (ParamKalVal[0] == 0)
+  //  out = false;
+
+    if (NumPressButton == btn_full)
+    {
+    if (ParamKalVal[0] <= ParamKalVal[2]) out = false;
+    }
+    if ((NumPressButton == btn_empty)&&(ParamKalVal[1]!=0))
+    {
+    if (ParamKalVal[0] >= ParamKalVal[1]) out = false;
+    }
+
+return out;
+}
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 bool MainWindow::MBtext(QString mes)
 {
@@ -1255,8 +1384,9 @@ bool MainWindow::MBtextSimple(QString mes0, QString mes1, QString mesYes, QStrin
            }
    return true;
 }
+
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-void MainWindow::MBtextErr(QString mes1, QString mes2)
+void MainWindow::MBtextErr(QString mes1, QString mes2, QString mes3)
 {
 
      QMessageBox* pmbx =
@@ -1268,13 +1398,32 @@ void MainWindow::MBtextErr(QString mes1, QString mes2)
                                QMessageBox::NoButton
                               );
 
-             pmbx->setButtonText(QMessageBox::No,"Исправить");
+             pmbx->setButtonText(QMessageBox::No, mes3);
            int n = pmbx->exec();
            delete pmbx;
 
            if (n == QMessageBox::No) {
            }
 
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+void MainWindow::MBtextInfo(QString mes1, QString mes2, QString mes3)
+{
+     QMessageBox* pmbx =
+               new QMessageBox(mes2,
+                               mes1,
+                               QMessageBox::Information,
+                               QMessageBox::NoButton,
+                               QMessageBox::No,
+                               QMessageBox::NoButton
+                              );
+
+             pmbx->setButtonText(QMessageBox::No, mes3);
+           int n = pmbx->exec();
+           delete pmbx;
+
+           if (n == QMessageBox::No) {
+           }
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 bool MainWindow::MBok()
@@ -1313,7 +1462,6 @@ V = ui->spinBox_V->value();
 
 error = false;
 
-
 //=============================================
 if(!ui->spinBox_D->isHidden())
 {
@@ -1330,7 +1478,7 @@ if(!ui->spinBox_D->isHidden())
 //=============================================
 if(error)
 {
-    MBtextErr(mes1A, mes01);
+    MBtextErr(mes1A, mes01, st_btn_change);
     return false;
 }
 
@@ -1367,7 +1515,7 @@ qDebug() << Vcalc;
 
         if(error)
         {
-            MBtextErr(mes1A, mes01);
+            MBtextErr(mes1A, mes01, st_btn_change);
             return false;
         }
 
@@ -1379,7 +1527,7 @@ qDebug() << Vcalc;
         {
             mes1A = "Высота бака слишком мала";
 
-            MBtextErr(mes1A, mes01);
+            MBtextErr(mes1A, mes01, st_btn_change);
             return false;
         }
         furst_string = true;
@@ -1390,7 +1538,7 @@ qDebug() << Vcalc;
                 {
                     mes1A = "Внешний диаметр бака слишком мал";
 
-                    MBtextErr(mes1A, mes01);
+                    MBtextErr(mes1A, mes01, st_btn_change);
                     return false;
                 }
                 furst_string = true;
@@ -1401,7 +1549,7 @@ qDebug() << Vcalc;
                         {
                             mes1A = "Внешний диаметр бака слишком велик";
 
-                            MBtextErr(mes1A, mes01);
+                            MBtextErr(mes1A, mes01, st_btn_change);
                             return false;
                         }
                         furst_string = true;
@@ -1566,6 +1714,7 @@ Stringi MainWindow::ParamAnalise(QStringList  Input_text) // DW_radio_text
     QString curVal = "=>";
     QString number; // metkaCustom
     QString subStr;
+    QString setup;
 
     int metkaPos;
 
@@ -1620,6 +1769,7 @@ Stringi MainWindow::ParamAnalise(QStringList  Input_text) // DW_radio_text
         DataStr.CurForma = 1;
         DataStr.CurParam = DataStr.Num_Bublik;
         numfind = true;
+        setup = FindChislo(str_1, 3);
         } // ---
         DataStr.Num_Bublik += 1;
 
@@ -1641,6 +1791,7 @@ Stringi MainWindow::ParamAnalise(QStringList  Input_text) // DW_radio_text
         DataStr.CurForma = 2;
         DataStr.CurParam = DataStr.Num_Vatruchka;
         numfind = true;
+        setup = FindChislo(str_1, 3);
         } // ---
         DataStr.Num_Vatruchka += 1;
 
@@ -1662,6 +1813,7 @@ Stringi MainWindow::ParamAnalise(QStringList  Input_text) // DW_radio_text
         DataStr.CurForma = 3;
         DataStr.CurParam = DataStr.Num_BochkaV;
         numfind = true;
+        setup = FindChislo(str_1, 3);
         } // ---
         DataStr.Num_BochkaV += 1;
 
@@ -1683,6 +1835,7 @@ Stringi MainWindow::ParamAnalise(QStringList  Input_text) // DW_radio_text
         DataStr.CurForma = 4;
         DataStr.CurParam = DataStr.Num_BochkaH;
         numfind = true;
+        setup = FindChislo(str_1, 3);
         } // ---
         DataStr.Num_BochkaH += 1;
 
@@ -1691,26 +1844,38 @@ Stringi MainWindow::ParamAnalise(QStringList  Input_text) // DW_radio_text
 
     }
     } // for
+     ParamKalVal[3] = setup.toInt();
+
     DataStr.init = true;
     return DataStr;
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 QString MainWindow::FindChislo(QString Input, int Index)
 {
-QString Output;
-QRegExp rx("(\\d+)");
-QStringList listNum;
-int pos = 0;
-while ((pos = rx.indexIn(Input, pos)) != -1) {
-    listNum << rx.cap(1);
-    pos += rx.matchedLength();
+
+QString Type = "(\\d+)";
+return FindChisloEx(Input, Index, Type);
+
 }
-if(listNum.size()>Index){
-Output = listNum.at(Index);
-} else {
-    Output = metkaNone;
-}
-return Output;
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+QString MainWindow::FindChisloEx(QString Input, int Index, QString Type)
+{
+
+    QString Output;
+    QRegExp rx(Type);
+    QStringList listNum;
+    int pos = 0;
+    while ((pos = rx.indexIn(Input, pos)) != -1) {
+        listNum << rx.cap(1);
+        pos += rx.matchedLength();
+    }
+    if(listNum.size()>Index){
+    Output = listNum.at(Index);
+    } else {
+        Output = metkaNone;
+    }
+    return Output;
+
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 QString MainWindow::getSetupTank()
@@ -1849,7 +2014,6 @@ void MainWindow::on_radioButton_F2_func(void)
 
      ui->frame_radio->hide();
 
-
      if(DataParam.init)
      {
          ui->comboBox_Param->clear();
@@ -1955,5 +2119,90 @@ return false;
 void MainWindow::on_checkBox_toggled(bool checked)
 {
    UpdateSizeWin();
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+void MainWindow::on_pb_Add_Parametr_clicked()
+{
+
+    ad = new Properties_2(); // this
+    ad->show();
+    // position
+
+    int x, y, offset_x, offset_y;
+
+    x = this->geometry().x();
+    y = this->geometry().y();
+
+    offset_x = 25;
+    offset_y = 200;
+
+    // QApplication::desktop()->screenGeometry();
+
+    ad->move(x+offset_x, y+offset_y);
+
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+void MainWindow::on_pb_Kalibrovka_clicked()
+{
+if((ComConnect)&&(NumSendMessage == 0))
+{
+    kal->show();
+
+    int x, y, offset_x, offset_y;
+
+    x = this->geometry().x();
+    y = this->geometry().y();
+
+    offset_x = 50;
+    offset_y = 300;
+
+    kal->move(x+offset_x, y+offset_y);
+}
+  //  qDebug() << "Click = " << Click;
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+void MainWindow::on_pb_Kalibrovka_help_clicked()
+{
+
+    MBtextInfo(mes12, "Help", "Ok");
+
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+void MainWindow::KalibrationView(bool Run)
+{
+    if(Run)
+    {
+    KalUiEnable = true;
+    NumParam = base_num_param + kal_num_param;
+    ui->pb_Kalibrovka->show();
+    ui->pb_Kalibrovka_help->show();
+    ui->label_11->show();
+    ui->label_kal->show();
+    } else {
+    KalUiEnable = false;
+    NumParam = base_num_param;
+    ui->pb_Kalibrovka->hide();
+    ui->pb_Kalibrovka_help->hide();
+    ui->label_11->hide();
+    ui->label_kal->hide();
+    }
+
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+void MainWindow::on_pushButton_Reset_clicked()
+{
+    QString str;
+    NumPressButton = btn_reset;
+    if(ComConnect)
+    {
+        // btn_reset
+        if(MBtextSimple(" ", "После сброса настроек датчик будет отключен.", "Ok", "Отмена"))
+        {
+        str = set_list.at(10);
+        str.append('\r');
+        sendData = str.toLocal8Bit();
+        writeData(sendData);
+        }
+    }
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB

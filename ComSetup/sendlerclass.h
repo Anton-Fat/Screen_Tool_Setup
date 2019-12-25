@@ -37,6 +37,7 @@ signals:
 private:
     void run() override;
 
+    void timeOut();
 
     QWaitCondition m_cond;
     bool m_quit = false;

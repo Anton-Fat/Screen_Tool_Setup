@@ -4,6 +4,7 @@
 #include "sendlerclass.h"
 #include "serialtimer.h"
 #include "properties_2.h"
+#include "kalibration.h"
 
 
 #include <QMainWindow>
@@ -13,7 +14,7 @@
 //#include <QMoveEvent>
 
 
-
+#define      base_num_param 6
 
 #define      res_none     0
 #define      res_display  1
@@ -22,6 +23,7 @@
 #define      res_deadvol  4
 #define      res_custom   6
 #define      res_tank     7
+#define      res_kal      8
 
 #define PERCENT_OF_SCREEN_H 90 / 100
 // #define PERCENT_OF_SCREEN_W 40 / 100
@@ -103,6 +105,12 @@ private slots:
 
     void on_checkBox_toggled(bool checked);
 
+    void on_pb_Kalibrovka_clicked();
+
+    void on_pb_Kalibrovka_help_clicked();
+
+    void on_pushButton_Reset_clicked();
+
 private:
     Ui::MainWindow *ui;
 
@@ -119,7 +127,8 @@ private:
     bool MBtext(QString mes);
     bool MBtextS(QString mes, QString mes2);
     bool MBtextSimple(QString mes0, QString mes1, QString mesYes, QString mesNo);
-    void MBtextErr(QString mes1, QString mes2);
+    void MBtextErr(QString mes1, QString mes2, QString mes3);
+    void MBtextInfo(QString mes1, QString mes2, QString mes3);
     bool MBok();
     void AllValCorrect();
     bool CorrectValAll();
@@ -129,6 +138,7 @@ private:
     bool SaveToFile(QString name, QString text);
     Stringi ParamAnalise(QStringList  Input_text);
     QString FindChislo(QString Input, int Index);
+    QString FindChisloEx(QString Input, int Index, QString Type);
     void CylPositionShow();
     bool DiagnosticsDriver();
 
@@ -144,10 +154,14 @@ private:
     void on_process_finished(int exitCode, QProcess::ExitStatus exitStatus);
     void on_process_readyReadStandardOutput();
     bool CMDAnalise(QString command);
+    void KalibrationView(bool Run);
+    QString GetKalString();
+    bool CheckKal();
 
    // float windowsDpiScale();
 
     Properties_2 *ad;
+    Kalibration *kal;
 
     QProcess p;
 
