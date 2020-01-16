@@ -25,10 +25,29 @@
 #define      res_tank     7
 #define      res_kal      8
 
+#define      max_point    60
+#define      offset_yplot 10
+
 #define PERCENT_OF_SCREEN_H 90 / 100
 // #define PERCENT_OF_SCREEN_W 40 / 100
 
 #define      testenable   false
+
+typedef struct
+{
+    bool init;
+
+    int X[max_point];
+    int Y[max_point];
+
+    int Time;
+
+    QString LabelX;
+    QString LabelY;
+    QString Title;
+
+} Grafik;
+
 
 extern QSerialPort *serial;
 
@@ -43,6 +62,10 @@ extern QByteArray sendData;
 extern bool Input;
 
 extern quint8 NumParam;
+
+
+
+extern Grafik Draw;
 
 
 namespace Ui {
@@ -111,6 +134,9 @@ private slots:
 
     void on_pushButton_Reset_clicked();
 
+    void on_pushButton_Tof_clicked();
+
+
 private:
     Ui::MainWindow *ui;
 
@@ -118,6 +144,8 @@ private:
     void reOpenPort();
 
     bool eventFilter(QObject *obj, QEvent *evt);
+
+    void refreshData();
 
     void StartWaitBar();
     void StopWaitBar();
@@ -137,6 +165,7 @@ private:
     bool LoadFromFile();
     bool SaveToFile(QString name, QString text);
     Stringi ParamAnalise(QStringList  Input_text);
+    double GetDouble(QString Input);
     QString FindChislo(QString Input, int Index);
     QString FindChisloEx(QString Input, int Index, QString Type);
     void CylPositionShow();
@@ -157,6 +186,12 @@ private:
     void KalibrationView(bool Run);
     QString GetKalString();
     bool CheckKal();
+    void DebugOff();
+    void PlotData();
+    void Plot_Init();
+    void Plot_Data_Reset();
+    bool Plot_Add_Point(double Xnew, double Ynew);
+    void Activation(bool Act);
 
    // float windowsDpiScale();
 

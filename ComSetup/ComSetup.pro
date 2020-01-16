@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui serialport
+QT       += core gui serialport printsupport
 
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
@@ -42,14 +42,16 @@ SOURCES += \
         mainwindow.cpp \
         properties_2.cpp \
         sendlerclass.cpp \
-        serialtimer.cpp
+        serialtimer.cpp \
+        qcustomplot.cpp
 
 HEADERS += \
         kalibration.h \
         mainwindow.h \
         properties_2.h \
         sendlerclass.h \
-        serialtimer.h
+        serialtimer.h \
+        qcustomplot.h
 
 FORMS += \
         kalibration.ui \
@@ -61,6 +63,15 @@ FORMS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+# Default rules for deployment.
+
+win32:{
+    Release: DESTDIR = ./ApplicationRelease/ #путь куда копируется exe
+    Debug: DESTDIR = ./ApplicationDebug/ #
+    Release: QMAKE_POST_LINK += windeployqt --release \
+    $$DESTDIR
+}
 
 DISTFILES +=
 

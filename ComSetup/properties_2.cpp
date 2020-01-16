@@ -34,8 +34,8 @@ const char * st_val_view3r = "попеременно: литры/процент�
 
 Stringi DataParam;
 bool Properties;
-//bool Properties;
 bool ComConnect;
+bool DebugOn;
 
 bool SetupParamDopB[NumDopParam];    // view wall PropaneVal max
 int  SetupParamDopVal[NumDopParam];

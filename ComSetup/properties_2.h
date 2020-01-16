@@ -14,6 +14,7 @@
 #define     btn_full       6
 #define     btn_empty      7
 #define     btn_reset      8
+#define     btn_debug      9
 
 
 extern const QString BorderButton;
@@ -39,6 +40,7 @@ extern const  QString mes12;
 
 extern bool Properties;
 extern bool ComConnect;
+extern bool DebugOn;
 
 extern bool SetupParamDopB[NumDopParam];
 extern int  SetupParamDopVal[NumDopParam];

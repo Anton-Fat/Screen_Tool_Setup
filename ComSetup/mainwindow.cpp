@@ -2,6 +2,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 // #include "properties_2.h"
+// #include  "qcustomplot.h"
 
 // #include <QSerialPort>
 #include <QSerialPortInfo>
@@ -29,7 +30,7 @@ QStringList  set_list;
 QStringList  get_list;
 QStringList  Display;
 
-const char * st_version = "0.95";
+const char * st_version = "0.97";
 const char * st_manual = "<a href=\http://ks2tools.ru/prop\">ссылке</a>";
 const char * st_help = "help@ks2corp.com";
 const char * file_param = "Param.txt";
@@ -59,6 +60,8 @@ const char * st_set_volume = "volume";
 const char * st_set_full = "full";
 const char * st_set_empty = "empty";
 const char * st_set_default = "default";
+const char * st_set_debug_on = "debug on";
+const char * st_set_debug_off = "debug off";
 
 const char * st_set = "set ";
 const char * st_get = "get ";
@@ -105,6 +108,7 @@ QStringList  DW_radio_text;
 bool CylPositionV;
 QString ReadCMD, WorkPathCMD, CommandCMD;
 
+Grafik Draw;
 
 enum Liquid
 {
@@ -129,6 +133,17 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // ---------------------------------------------------------------
     // Setup images
+
+    QElapsedTimer time;
+    time.start();
+    QThread::sleep(1);
+    qDebug() << time.nsecsElapsed(); // 999930725
+
+    QTime start = QTime::currentTime();
+    QThread::sleep(2);
+    qDebug() << "прошло " << start.elapsed() << " милисекунд";
+
+    // ----------------------------------------------------------------
 
     QDate date;
     date = QDate::currentDate();
@@ -156,6 +171,7 @@ MainWindow::MainWindow(QWidget *parent) :
         ui->pushButton_3->setStyleSheet(BorderButton);
         ui->pushButton_Reset->setStyleSheet(BorderButton);
         ui->pb_Kalibrovka_help->setStyleSheet(BorderButtonK);
+        ui->pushButton_Tof->setStyleSheet(BorderButton);
 
     // ---------------------------------------------------------------
 
@@ -271,6 +287,11 @@ MainWindow::MainWindow(QWidget *parent) :
         set_list.append(st_set);
         set_list.last().append(st_set_default);
 
+        set_list.append(st_set);
+        set_list.last().append(st_set_debug_on);
+        set_list.append(st_set);
+        set_list.last().append(st_set_debug_off);
+
         get_list.append(st_get);
         get_list.last().append(st_get_did);
         get_list.append(st_get);
@@ -314,6 +335,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ComConnect = false;
     Reopen = true;
+    DebugOn = false;
 
     AllValCorrect();
 
@@ -342,6 +364,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     kal = new Kalibration(); // this
     kal->setWindowFlags(kal->windowFlags() & ~Qt::WindowContextHelpButtonHint);
+
+    Plot_Init();
 
 }
 
@@ -511,11 +535,17 @@ void MainWindow::realPush(const QString &s1, int res)   // >>>
 // CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 void MainWindow::writeData(const QByteArray &data)
 {
+    refreshData();
+    serial->write(data);
+}
+// CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+void MainWindow::refreshData()
+{
     SerialKostil.Count_time = SerialKostil.TimeOut;
     SerialKostil.on_timer = true;
     SerialKostil.Count = 0;
     SerialKostil.DataInput.clear();
-    serial->write(data);
+
 }
 void MainWindow::realStatus(int res)
 {
@@ -558,82 +588,18 @@ void MainWindow::realPop(const QString &s1, int res)   // <<<
     QString Input = s1;
     QString Setup;
 
+    if(res != 0)
+    {
     qDebug()<<"Input All --- Count = "+QString::number(res);
+    qDebug()<<"Receive data !";
+    }
 
+    if (NumPressButton != btn_debug)
+    {
     removeEnd(&Input);
     qDebug()<<Input;
 
-    removeEcho(&Input);
-
-    switch (NumPressButton) {
-    case btn_setup:
-
-        if(Input == metkaOK)
-        {
-            if(!Hand) {
-            MBok(); //
-            }
-
-        } else {
-            if(Hand)
-            {
-            HandOK = false;
-            qDebug() << "HandOK = false";
-            }
-}
-
-    break;
-    case btn_cansel:
-
-        qDebug()<<"btn cansel";
-
-    break;
-    case btn_full:
-    if(fi==1){
-    ParamKalVal[0] = Input.toInt();
-    if(!CheckKal())
-    {
-       PingPong = false;
-       MBtextErr("В ходе калибровки произошла ошибка. Сообщите о проблеме в техническую поддержку.", "Ошибка", st_btn_change);
-    }
-    qDebug() << "ParamVolume = " << ParamKalVal[0];
-    }
-    if(fi==2){
-        //ParamFull = Input;
-
-        ParamKalVal[1] = Input.toInt();
-        ui->label_kal->setText(GetKalString());
-        if(ParamKalVal[2]==0)
-        {
-        MBtextErr("Теперь проведите калибровку для пустого бака.", " ", "Ok");
-        } else {
-        MBtextInfo("Датчик откалиброван.", " ", "Ok");
-        }
-
-    }
-    break;
-    case btn_empty:
-        if(fi==1){
-        ParamKalVal[0] = Input.toInt();
-        if(!CheckKal())
-        {
-           PingPong = false;
-           MBtextErr("В ходе калибровки произошла ошибка. Сообщите о проблеме в техническую поддержку.", "Ошибка", st_btn_change);
-        }
-        qDebug() << "ParamVolume = " << ParamKalVal[0];
-    }
-    if(fi==2){
-        //ParamEmpty = Input;
-        ParamKalVal[2] = Input.toInt();
-        ui->label_kal->setText(GetKalString());
-        if(ParamKalVal[1]==0)
-        {
-        MBtextErr("Теперь проведите калибровку для полного бака.", " ", "Ok");
-        } else {
-         MBtextInfo("Датчик откалиброван.", " ", "Ok");
-        }
-        }
-    break;
+    removeEcho(&Input); // hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
     }
 
     if( NumPressButton == btn_connect)
@@ -800,7 +766,8 @@ void MainWindow::realPop(const QString &s1, int res)   // <<<
             NumSendMessage = 0;
             }
             if(NumSendMessage == 0){
-            ui->pushButton->setEnabled(true);
+            Activation(true);
+
             }
 
         // NumParam
@@ -822,8 +789,148 @@ void MainWindow::realPop(const QString &s1, int res)   // <<<
             NumSendMessage +=1;
         }
     }
+// WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
 
-    qDebug()<<"Receive data !";
+    switch (NumPressButton) {
+    case btn_setup:
+
+        if(Input == metkaOK)
+        {
+            if(!Hand) {
+            MBok(); //
+            }
+
+        } else {
+            if(Hand)
+            {
+            HandOK = false;
+            qDebug() << "HandOK = false";
+            }
+}
+
+    break;
+    case btn_cansel:
+
+        qDebug()<<"btn cansel";
+
+    break;
+    case btn_full:
+    if(fi==1){
+    ParamKalVal[0] = Input.toInt();
+    if(!CheckKal())
+    {
+       PingPong = false;
+       MBtextErr("В ходе калибровки произошла ошибка. Сообщите о проблеме в техническую поддержку.", "Ошибка", st_btn_change);
+    }
+    qDebug() << "ParamVolume = " << ParamKalVal[0];
+    }
+    if(fi==2){
+        //ParamFull = Input;
+
+        ParamKalVal[1] = Input.toInt();
+        ui->label_kal->setText(GetKalString());
+        if(ParamKalVal[2]==0)
+        {
+        MBtextErr("Теперь проведите калибровку для пустого бака.", " ", "Ok");
+        } else {
+        MBtextInfo("Датчик откалиброван.", " ", "Ok");
+        }
+
+    }
+    break;
+    case btn_empty:
+        if(fi==1){
+        ParamKalVal[0] = Input.toInt();
+        if(!CheckKal())
+        {
+           PingPong = false;
+           MBtextErr("В ходе калибровки произошла ошибка. Сообщите о проблеме в техническую поддержку.", "Ошибка", st_btn_change);
+        }
+        qDebug() << "ParamVolume = " << ParamKalVal[0];
+    }
+    if(fi==2){
+        //ParamEmpty = Input;
+        ParamKalVal[2] = Input.toInt();
+        ui->label_kal->setText(GetKalString());
+        if(ParamKalVal[1]==0)
+        {
+        MBtextErr("Теперь проведите калибровку для полного бака.", " ", "Ok");
+        } else {
+         MBtextInfo("Датчик откалиброван.", " ", "Ok");
+        }
+        }
+    break;
+    case btn_debug:
+
+       if (DebugOn == true)
+       {
+
+        if(res != 0)
+        {
+
+        qDebug()<<"Debug All ---" << Input;
+     // Parser
+
+     QString debug_Tof = " TOF";
+     QString debug_Level = "Level";
+     QString subStr, outputText;
+     int metkaPos;
+     double x;
+
+     if (Input.contains(debug_Tof, Qt::CaseInsensitive))
+     {
+         metkaPos = Input.indexOf(debug_Tof);
+         subStr = Input.mid(metkaPos);
+         outputText = FindChislo(subStr, 0);
+      }
+     qDebug()<<"Debug ---" << outputText;
+     ui->label_test_L->setText(outputText);
+
+     Plot_Add_Point(0, outputText.toInt());
+     PlotData();
+
+     // ---------------------------------------------
+
+
+     if (Input.contains(debug_Level, Qt::CaseInsensitive))
+     {
+         metkaPos = Input.indexOf(debug_Level);
+         subStr = Input.mid(metkaPos+ debug_Level.size());
+         x = GetDouble(subStr);
+
+         qDebug()<<"Debug -----------" << subStr;
+         ui->label_test_H->setText(QString::number(x) + " мм");
+         // ---------------------------------------------
+
+       //  Plot_Add_Point(0, x);
+       //  PlotData();
+      }
+
+
+        }
+
+     refreshData();
+
+     } else { // DebugOn == true
+
+           if (NumSendMessage == 1)
+           {
+            NumPressButton = btn_connect;
+            outputData = get_list.at(0);
+            outputData.append('\r');
+
+            Activation(false);
+            writeData(outputData.toLocal8Bit());
+           }
+
+     }
+
+     // TOF
+
+    break;
+    }
+
+
 
 }
 void MainWindow::serialReceived()
@@ -882,17 +989,15 @@ qDebug() << "Message Diagnostiks";
 
              ui->label_status->setText("Датчик подключен");
              QThread::msleep(200);
-             NumSendMessage = 1;
+
              // get infooo (1)
 
             // Num += NumParam;
 
-             outputData = get_list.at(0);
-             outputData.append('\r');
 
-             ui->pushButton->setEnabled(false);
-
-             writeData(outputData.toLocal8Bit());
+             NumPressButton = btn_debug;
+             DebugOff();
+             NumSendMessage = 1;
 
              ui->pushButton->setText(st_btn_disconnect);
            }
@@ -1849,6 +1954,17 @@ Stringi MainWindow::ParamAnalise(QStringList  Input_text) // DW_radio_text
     DataStr.init = true;
     return DataStr;
 }
+
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+double MainWindow::GetDouble(QString Input)
+{
+double x;
+const char *text;
+QByteArray textline;
+text = Input.toUtf8();
+int res = sscanf(text, "%lf ", &x);
+return x;
+}
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 QString MainWindow::FindChislo(QString Input, int Index)
 {
@@ -2193,7 +2309,7 @@ void MainWindow::on_pushButton_Reset_clicked()
 {
     QString str;
     NumPressButton = btn_reset;
-    if(ComConnect)
+    if((ComConnect)&&(NumSendMessage == 0))
     {
         // btn_reset
         if(MBtextSimple(" ", "После сброса настроек датчик будет отключен.", "Ok", "Отмена"))
@@ -2206,3 +2322,130 @@ void MainWindow::on_pushButton_Reset_clicked()
     }
 }
 // BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+void MainWindow::on_pushButton_Tof_clicked()
+{
+    QString str;
+
+    if((ComConnect)&&(NumSendMessage == 0))
+    {
+        NumPressButton = btn_debug;
+        // btn_tof
+
+        if (DebugOn == false)
+        {
+        DebugOn = true;
+        ui->pushButton_Tof->setText("Закончить тест");
+
+        Plot_Data_Reset();
+
+        str = set_list.at(11);
+        str.append('\r');
+        sendData = str.toLocal8Bit();
+        writeData(sendData);
+        } else {
+
+        DebugOff();
+
+        }
+
+    }
+
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+void MainWindow::DebugOff()
+{
+    QString str;
+    DebugOn = false;
+    ui->pushButton_Tof->setText("Начать тест");
+
+    str = set_list.at(12);
+    str.append('\r');
+    sendData = str.toLocal8Bit();
+    writeData(sendData);
+
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+void MainWindow::PlotData()
+{
+
+
+    QVector<double> x(max_point), y0(max_point);
+    double Ymax;
+    Ymax = 0;
+    for (int i=0; i<max_point; ++i)
+    {
+      x[i] = Draw.X[i];
+      y0[i] = Draw.Y[i]; //
+      if(y0[i] > Ymax)
+      {
+       Ymax =  y0[i];
+      }
+    }
+    qDebug() <<  "New data";
+    qDebug() << x[0];
+
+    ui->customPlot->graph(0)->setData(x, y0);
+
+    ui->customPlot->xAxis->setRange(x[0], x[max_point-1]);
+    ui->customPlot->yAxis->setRange(-1*offset_yplot, Ymax + offset_yplot);
+
+    ui->customPlot->xAxis->setLabel("Время, сек");
+    ui->customPlot->yAxis->setLabel("TOF"); // Высота, мм
+
+    // let the ranges scale themselves so graph 0 fits perfectly in the visible area:
+    ui->customPlot->graph(0)->rescaleAxes(true);
+
+    // Note: we could have also just called customPlot->rescaleAxes(); instead
+    // Allow user to drag axis ranges with mouse, zoom with mouse wheel and select graphs by clicking:
+    // ui->customPlot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectPlottables);
+
+    ui->customPlot->replot();
+
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+void MainWindow::Plot_Init()
+{
+    Plot_Data_Reset();
+
+    ui->customPlot->addGraph();
+    ui->customPlot->graph(0)->setPen(QPen(Qt::blue)); // line color blue for first graph
+    ui->customPlot->graph(0)->setBrush(QBrush(QColor(0, 0, 255, 20))); // first graph will be filled with translucent blue
+
+    // PlotData();
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+void MainWindow::Plot_Data_Reset()
+{
+
+    for (int i = 0; i < max_point; i++) {
+        Draw.X[i] = i - max_point;
+        Draw.Y[i] = 0;
+        Draw.Time = 0 - max_point;
+    }
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+bool MainWindow::Plot_Add_Point(double Xnew, double Ynew)
+{
+    Draw.Time++;
+    for (int i = 0; i < max_point; i++) {
+        Draw.X[i] = Draw.Time + i;
+        if (i != max_point -1)
+        {
+        Draw.Y[i] = Draw.Y[i+1];
+        } else {
+        Draw.Y[i] = Ynew;
+        }
+    }
+    return true;
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+void MainWindow::Activation(bool Act)
+{
+
+    ui->pushButton->setEnabled(Act);
+    ui->pushButton_Reset->setEnabled(Act);
+    ui->pushButton_Tof->setEnabled(Act);
+
+}
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
